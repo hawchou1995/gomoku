@@ -1,0 +1,14 @@
+# 训练棋谱（用户对局记录，隐私数据不入库）
+model/games/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# 系统
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/

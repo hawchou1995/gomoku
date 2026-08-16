@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>五子棋 · Gomoku</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="css/style.css">
+  <!--
+    PeerJS 双 CDN fallback：jsdelivr 主，unpkg 备。
+    若两个都加载失败（离线），联机模式会提示不可用，人机模式仍可玩。
+  -->
+  <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js"></script>
+  <script>
+    if (typeof Peer === 'undefined') {
+      document.write('<script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js"><\/script>');
+    }
+  </script>
+  <script>
+    // ── 信令服务器配置（默认 PeerJS 官方公共信令）──
+    // 自托管信令示例（局域网内某台机器执行：npx peer --port 9000）：
+    //   window.PEER_CONFIG = { host: '192.168.1.100', port: 9000, path: '/', secure: false, debug: 0 };
+    window.PEER_CONFIG = { host: '0.peerjs.com', port: 443, path: '/', secure: true, debug: 0 };
+  </script>
+</head>
+<body>
+  <div id="app">
+
+    <!-- ═══ 顶栏 ═══ -->
+    <header class="topbar">
+      <button class="brand" id="btn-home" title="返回首页">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span class="brand-text">五子棋</span>
+      </button>
+      <div class="topbar-right">
+        <span id="conn-indicator" class="conn-indicator hidden"></span>
+        <button class="btn ghost" id="btn-open-history">对局记录</button>
+      </div>
+    </header>
+
+    <!-- ═══ 视图：模式选择 ═══ -->
+    <main id="view-home" class="view view-home">
+      <div class="home-hero">
+        <h1 class="home-title">五子棋</h1>
+        <p class="home-sub">15 × 15 棋盘 · 任意方向五连即胜</p>
+      </div>
+      <div class="mode-grid">
+        <section class="mode-card" data-mode="ai">
+          <div class="mode-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="4"></circle><circle cx="12" cy="7" r="1"></circle>
+            </svg>
+          </div>
+          <h2 class="mode-name">人机对战</h2>
+          <p class="mode-desc">一至九段 AI，从新手友好到接近满血</p>
+          <div class="level-picker" id="level-picker" aria-label="选择段位">
+            <button class="level-btn" data-level="1">1</button><button class="level-btn" data-level="2">2</button>
+            <button class="level-btn" data-level="3">3</button><button class="level-btn" data-level="4">4</button>
+            <button class="level-btn" data-level="5">5</button><button class="level-btn" data-level="6">6</button>
+            <button class="level-btn" data-level="7">7</button><button class="level-btn" data-level="8">8</button>
+            <button class="level-btn" data-level="9">9</button>
+          </div>
+          <div class="engine-picker">
+            <span class="engine-label">引擎</span>
+            <span class="engine-status" id="engine-status">融合引擎（启发式 + 自学习）</span>
+          </div>
+          <button class="btn primary wide" id="btn-enter-ai">进入对局</button>
+        </section>
+
+        <section class="mode-card" data-mode="lan">
+          <div class="mode-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="8" width="6" height="8" rx="1"></rect><rect x="16" y="8" width="6" height="8" rx="1"></rect>
+              <path d="M5 16v2h14v-2M5 12h14"></path>
+            </svg>
+          </div>
+          <h2 class="mode-name">局域网联机</h2>
+          <p class="mode-desc">同一局域网内设备互连，房间码加入</p>
+          <button class="btn primary wide" id="btn-lan-create">创建房间</button>
+          <button class="btn outline wide" id="btn-lan-join">加入房间</button>
+        </section>
+
+        <section class="mode-card" data-mode="online">
+          <div class="mode-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"></path>
+            </svg>
+          </div>
+          <h2 class="mode-name">互联网联机</h2>
+          <p class="mode-desc">跨网络对战，分享房间码即可连接</p>
+          <button class="btn primary wide" id="btn-online-create">创建房间</button>
+          <button class="btn outline wide" id="btn-online-join">加入房间</button>
+        </section>
+      </div>
+      <p class="home-note">联机为点对点直连（WebRTC），数据不经过中转服务器；信令服务仅用于建立连接。</p>
+    </main>
+
+    <!-- ═══ 视图：对局 ═══ -->
+    <main id="view-game" class="view view-game hidden">
+      <div class="game-layout">
+        <div class="board-panel">
+          <div class="game-status" id="game-status">准备中…</div>
+          <div class="board-wrap">
+            <canvas id="board" width="640" height="640" aria-label="五子棋棋盘"></canvas>
+          </div>
+        </div>
+
+        <aside class="side-panel">
+          <div class="players">
+            <div class="player-row" id="p-black">
+              <span class="stone black" aria-hidden="true"></span>
+              <span class="player-name" id="p-black-name">黑方 · 房主</span>
+              <span class="player-clock" id="p-black-clock">00:00</span>
+            </div>
+            <div class="player-row" id="p-white">
+              <span class="stone white" aria-hidden="true"></span>
+              <span class="player-name" id="p-white-name">白方 · 等待加入</span>
+              <span class="player-clock" id="p-white-clock">00:00</span>
+            </div>
+          </div>
+
+          <!-- 开局设置区（仅人机模式）：确认好选项再开局，落子后锁定 -->
+          <div class="ai-setup" id="ai-setup">
+            <div class="setup-head">开局设置 <span class="setup-hint">落子后锁定</span></div>
+            <div class="toggles">
+              <label class="toggle-row" id="toggle-first-row">
+                <span class="toggle-label">玩家先手</span>
+                <input type="checkbox" id="toggle-first" checked>
+                <span class="toggle-switch"></span>
+              </label>
+              <label class="toggle-row" id="toggle-forbid-row">
+                <span class="toggle-label">黑棋禁手</span>
+                <input type="checkbox" id="toggle-forbid">
+                <span class="toggle-switch"></span>
+              </label>
+              <label class="toggle-row" id="toggle-swap-row">
+                <span class="toggle-label">三手交换</span>
+                <input type="checkbox" id="toggle-swap">
+                <span class="toggle-switch"></span>
+              </label>
+            </div>
+            <button class="btn primary wide" id="btn-start-ai">开始对局</button>
+          </div>
+
+          <div class="controls">
+            <button class="btn outline sm" id="btn-undo" disabled>悔棋</button>
+            <button class="btn outline sm" id="btn-resign" disabled>认输</button>
+            <button class="btn outline sm" id="btn-restart" disabled>重开</button>
+            <button class="btn outline sm" id="btn-leave">离开</button>
+          </div>
+          <div class="exports">
+            <button class="btn ghost sm" id="btn-export-json" disabled>导出 JSON</button>
+            <button class="btn ghost sm" id="btn-export-csv" disabled>导出 CSV</button>
+          </div>
+
+          <div class="chat-box" id="chat-box">
+            <div class="chat-head">实时聊天 <span id="chat-hint" class="chat-hint hidden">· 有消息</span></div>
+            <div id="chat-log" class="chat-log" aria-live="polite"></div>
+            <form id="chat-form" class="chat-form">
+              <input id="chat-input" type="text" maxlength="200" placeholder="说点什么…" autocomplete="off">
+              <button type="submit" class="btn primary sm">发送</button>
+            </form>
+          </div>
+        </aside>
+      </div>
+    </main>
+
+    <!-- ═══ 视图：历史记录 ═══ -->
+    <main id="view-history" class="view view-history hidden">
+      <div class="history-head">
+        <h2 class="section-title">对局记录</h2>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button class="btn ghost sm" id="btn-history-export-json">导出 JSON</button>
+          <button class="btn ghost sm" id="btn-history-export-csv">导出 CSV</button>
+          <button class="btn ghost sm" id="btn-history-clear">清空</button>
+          <button class="btn outline sm" id="btn-history-back">返回大厅</button>
+        </div>
+      </div>
+      <div id="history-list" class="history-list"></div>
+    </main>
+
+    <!-- ═══ 弹窗：房间 / 结果 ═══ -->
+    <div id="modal-root" class="modal-root hidden">
+      <div class="modal-backdrop" id="modal-backdrop"></div>
+      <div class="modal-card" role="dialog" aria-modal="true" id="modal-card"></div>
+    </div>
+
+    <!-- ═══ 提示 Toast ═══ -->
+    <div id="toast" class="toast hidden"></div>
+
+  </div>
+
+  <script src="js/engine.js?v=20260816d"></script>
+  <script src="js/ai.js?v=20260816d"></script>
+  <script src="js/net_forward.js?v=20260816d"></script>
+  <script src="js/ai_mcts.js?v=20260816d"></script>
+  <script src="model/best_net.js?v=20260816d"></script>
+  <script src="js/audio.js?v=20260816d"></script>
+  <script src="js/storage.js?v=20260816d"></script>
+  <script src="js/net.js?v=20260816d"></script>
+  <script src="js/app.js?v=20260816d"></script>
+</body>
+</html>
