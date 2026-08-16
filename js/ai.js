@@ -1012,7 +1012,11 @@
       for (var oi = 0; oi < opPts.length; oi++) if (opPts[oi].x === px && opPts[oi].y === py) { isOp = 1; break; }
       pCands.push({ x: px, y: py, atk: atk, isOp: isOp });
     }
-    pCands.sort(function (a, b) { return (b.atk - a.atk) * 2 + (b.isOp - a.isOp); });
+    pCands.sort(function (a, b) {
+      var d = (b.atk - a.atk) * 2 + (b.isOp - a.isOp);
+      if (d !== 0) return d;
+      return POS_WEIGHT[b.y * SIZE + b.x] - POS_WEIGHT[a.y * SIZE + a.x];
+    });
     for (var k = 0; k < pCands.length; k++) {
       if (Date.now() > dl) break;
       var px = pCands[k].x, py = pCands[k].y;
