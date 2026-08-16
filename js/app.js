@@ -54,6 +54,8 @@
   var boardCssSize = 0;   // 棋盘 CSS 像素边长
   var dpr = 1;
   var mouseCell = null;    // {x,y} 当前鼠标悬停的格子坐标（用于准星）
+  var zoomLevel = 1;       // 棋盘缩放倍率（1 = 100%）
+  var historySelected = {}; // 历史记录多选导出：{recordId: true}
 
   // ─────────────────────────── 视图路由 ───────────────────────────
 
@@ -109,12 +111,25 @@
   // ─────────────────────────── 棋盘渲染 ───────────────────────────
 
   function resizeBoard() {
-    var wrap = board.parentElement;
-    boardCssSize = wrap.clientWidth;
+    // 棋盘内容边长 = board-wrap 的 CSS 宽度（board-wrap 宽 = 滚动容器可视宽 × zoomLevel）
+    var wrap = document.querySelector('.board-scroll');
+    var baseW = wrap ? wrap.clientWidth : board.parentElement.clientWidth;
+    var applied = Math.round(baseW * zoomLevel);
+    var bw = document.querySelector('.board-wrap');
+    if (bw) { bw.style.width = applied + 'px'; }
+    boardCssSize = applied;
     dpr = window.devicePixelRatio || 1;
     board.width = Math.round(boardCssSize * dpr);
     board.height = Math.round(boardCssSize * dpr);
     drawBoard();
+  }
+
+  /** 缩放棋盘（0.5~3 倍），居中显示缩放比例。 */
+  function setBoardZoom(z) {
+    zoomLevel = Math.max(0.5, Math.min(3, z));
+    var lb = $('zoom-label');
+    if (lb) lb.textContent = Math.round(zoomLevel * 100) + '%';
+    resizeBoard();
   }
 
   var BOARD_BG = '#e9e2d2';
@@ -1335,17 +1350,30 @@
     var box = $('history-list');
     if (!list.length) {
       box.innerHTML = '<div class="history-empty">暂无对局记录</div>';
+      updateSelectedBar();
       return;
     }
     box.innerHTML = '';
     list.forEach(function (r) {
       var el = document.createElement('div');
       el.className = 'history-item';
+      // 多选 checkbox（阻止冒泡避免触发回放）
+      var cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.className = 'history-check';
+      cb.checked = !!historySelected[r.id];
+      cb.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        if (cb.checked) historySelected[r.id] = true;
+        else delete historySelected[r.id];
+        updateSelectedBar();
+      });
+      el.appendChild(cb);
+
       var result = '';
       if (r.result === 'draw') result = '<span class="result draw">平局</span>';
       else if (r.result === 'black') result = '<span class="result ' + (r.mode === 'ai' && r.result === 'white' ? 'lose' : (r.result === 'black' ? 'win' : 'lose')) + '">黑胜</span>';
       else result = '<span class="result ' + (r.result === 'white' ? 'win' : 'lose') + '">白胜</span>';
-      // 人机模式："你"执黑，黑胜=你赢
       var winCls = 'win', loseCls = 'lose';
       if (r.mode === 'ai') {
         result = r.result === 'draw'
@@ -1358,16 +1386,73 @@
       }
       var time = new Date(r.createdAt).toLocaleString('zh-CN', { hour12: false });
       var modeName = r.mode === 'ai' ? '人机 · ' + (r.level || '') + ' 段' : (r.mode === 'lan' ? '局域网' : '互联网');
-      el.innerHTML =
+      var body = document.createElement('div');
+      body.className = 'history-item-body';
+      body.innerHTML =
         result +
         '<div class="meta">' +
         '<div class="row1">' + esc(modeName) + ' · ' + esc((r.players && r.players.black) || '黑方') + ' vs ' + esc((r.players && r.players.white) || '白方') + '</div>' +
         '<div>' + time + '</div>' +
         '</div>' +
         '<span class="moves-count">' + r.moves.length + ' 手</span>';
-      el.addEventListener('click', function () { openReplay(r); });
+      body.addEventListener('click', function () { openReplay(r); });
+      el.appendChild(body);
+
+      // 单条导出按钮（阻止冒泡）
+      var exp = document.createElement('button');
+      exp.className = 'btn ghost sm history-export';
+      exp.textContent = '导出';
+      exp.title = '导出这条记录';
+      exp.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        exportRecords([r], 'json');
+      });
+      el.appendChild(exp);
+
       box.appendChild(el);
     });
+    updateSelectedBar();
+  }
+
+  /** 更新「导出选中」按钮的可用状态与数量提示。 */
+  function updateSelectedBar() {
+    var ids = Object.keys(historySelected).filter(function (k) { return historySelected[k]; });
+    var n = ids.length;
+    var j = $('btn-history-export-selected-json');
+    var c = $('btn-history-export-selected-csv');
+    if (j) { j.disabled = n === 0; j.textContent = n > 0 ? '导出选中 JSON (' + n + ')' : '导出选中 JSON'; }
+    if (c) { c.disabled = n === 0; c.textContent = n > 0 ? '导出选中 CSV (' + n + ')' : '导出选中 CSV'; }
+  }
+
+  /** 按 id 集合导出记录（单条或多条）。 */
+  function exportRecords(records, fmt) {
+    if (!records.length) { toast('未选择记录'); return; }
+    var ts = new Date().toISOString().slice(0, 10);
+    if (fmt === 'json') {
+      exportJSON(records.length === 1 ? records[0] : records, 'gomoku-history-' + ts + '.json');
+    } else {
+      var lines = ['id,mode,level,black,white,result,moves,created_at'];
+      for (var i = 0; i < records.length; i++) {
+        var r = records[i];
+        lines.push([r.id, r.mode, r.level || '', (r.players && r.players.black) || '', (r.players && r.players.white) || '', r.result, r.moves.length, r.createdAt].join(','));
+      }
+      var csv = '\uFEFF' + lines.join('\n');
+      var blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = (records.length === 1 ? 'gomoku-game' : 'gomoku-history') + '-' + ts + '.csv'; a.click();
+      URL.revokeObjectURL(url);
+    }
+    toast('已导出 ' + records.length + ' 条记录 (' + fmt.toUpperCase() + ')');
+  }
+
+  /** 导出当前勾选的记录。 */
+  function doExportSelected(fmt) {
+    var ids = Object.keys(historySelected).filter(function (k) { return historySelected[k]; });
+    if (!ids.length) { toast('请先勾选要导出的记录'); return; }
+    var list = Store.loadAll();
+    var recs = list.filter(function (r) { return historySelected[r.id]; });
+    exportRecords(recs, fmt);
   }
 
   /** 回放弹窗：复用棋盘渲染，支持步进。 */
@@ -1436,6 +1521,16 @@
           rpCtx.strokeStyle = v === E.BLACK ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.3)';
           rpCtx.stroke();
         }
+      }
+      // 步数标注：棋盘上每个棋子旁标手数（与主棋盘一致）
+      var rpMoves = replayGame.moves;
+      rpCtx.textAlign = 'center';
+      rpCtx.textBaseline = 'middle';
+      for (var mi2 = 0; mi2 < rpMoves.length; mi2++) {
+        var rm = rpMoves[mi2];
+        rpCtx.fillStyle = rm.player === E.BLACK ? '#d4a853' : '#5b5342';
+        rpCtx.font = 'bold ' + (c * 0.34) + 'px ' + getComputedStyle(document.documentElement).getPropertyValue('--mono').split(',')[0].trim();
+        rpCtx.fillText(mi2 + 1, c * (rm.x + 1), c * (rm.y + 1));
       }
       if (step > 0) {
         var m = record.moves[step - 1];
@@ -1694,6 +1789,7 @@
     );
     $('m-clear-ok').addEventListener('click', function () {
       Store.clear();
+      historySelected = {};
       close();
       renderHistory();
       toast('已清空对局记录');
@@ -1704,6 +1800,9 @@
   $('btn-export-json').addEventListener('click', doExportCurrentJSON);
   $('btn-export-csv').addEventListener('click', doExportCurrentCSV);
   $('btn-history-export-json').addEventListener('click', doExportHistoryJSON);
+  $('btn-history-export-csv').addEventListener('click', doExportHistoryCSV);
+  $('btn-history-export-selected-json').addEventListener('click', function () { doExportSelected('json'); });
+  $('btn-history-export-selected-csv').addEventListener('click', function () { doExportSelected('csv'); });
   $('btn-history-back').addEventListener('click', function () { showView('home'); });
 
   // 先手/禁手/三手交换开关（对局界面开局设置区：开局前可调，落子后锁定）
@@ -1743,6 +1842,11 @@
   $('btn-start-ai').addEventListener('click', function () {
     beginAIGame();
   });
+
+  // 棋盘缩放
+  $('btn-zoom-in').addEventListener('click', function () { setBoardZoom(zoomLevel + 0.25); });
+  $('btn-zoom-out').addEventListener('click', function () { setBoardZoom(zoomLevel - 0.25); });
+  $('btn-zoom-reset').addEventListener('click', function () { setBoardZoom(1); });
 
   // 窗口尺寸变化 → 重绘棋盘
   var resizeTimer = null;

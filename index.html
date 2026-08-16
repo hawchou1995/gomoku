@@ -100,8 +100,16 @@
       <div class="game-layout">
         <div class="board-panel">
           <div class="game-status" id="game-status">准备中…</div>
-          <div class="board-wrap">
-            <canvas id="board" width="640" height="640" aria-label="五子棋棋盘"></canvas>
+          <div class="board-zoom">
+            <button class="btn ghost sm" id="btn-zoom-out" title="缩小棋盘">−</button>
+            <span class="zoom-label" id="zoom-label">100%</span>
+            <button class="btn ghost sm" id="btn-zoom-in" title="放大棋盘">＋</button>
+            <button class="btn ghost sm" id="btn-zoom-reset" title="重置缩放">重置</button>
+          </div>
+          <div class="board-scroll">
+            <div class="board-wrap">
+              <canvas id="board" width="640" height="640" aria-label="五子棋棋盘"></canvas>
+            </div>
           </div>
         </div>
 
@@ -169,9 +177,11 @@
     <main id="view-history" class="view view-history hidden">
       <div class="history-head">
         <h2 class="section-title">对局记录</h2>
-        <div style="display:flex;gap:8px;align-items:center;">
-          <button class="btn ghost sm" id="btn-history-export-json">导出 JSON</button>
-          <button class="btn ghost sm" id="btn-history-export-csv">导出 CSV</button>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <button class="btn ghost sm" id="btn-history-export-selected-json" disabled>导出选中 JSON</button>
+          <button class="btn ghost sm" id="btn-history-export-selected-csv" disabled>导出选中 CSV</button>
+          <button class="btn ghost sm" id="btn-history-export-json">导出全部 JSON</button>
+          <button class="btn ghost sm" id="btn-history-export-csv">导出全部 CSV</button>
           <button class="btn ghost sm" id="btn-history-clear">清空</button>
           <button class="btn outline sm" id="btn-history-back">返回大厅</button>
         </div>
@@ -190,14 +200,14 @@
 
   </div>
 
-  <script src="js/engine.js?v=20260816d"></script>
-  <script src="js/ai.js?v=20260816d"></script>
-  <script src="js/net_forward.js?v=20260816d"></script>
-  <script src="js/ai_mcts.js?v=20260816d"></script>
-  <script src="model/best_net.js?v=20260816d"></script>
-  <script src="js/audio.js?v=20260816d"></script>
-  <script src="js/storage.js?v=20260816d"></script>
-  <script src="js/net.js?v=20260816d"></script>
-  <script src="js/app.js?v=20260816d"></script>
+  <script src="js/engine.js?v=20260816f"></script>
+  <script src="js/ai.js?v=20260816f"></script>
+  <script src="js/net_forward.js?v=20260816f"></script>
+  <script src="js/ai_mcts.js?v=20260816f"></script>
+  <script src="model/best_net.js?v=20260816f"></script>
+  <script src="js/audio.js?v=20260816f"></script>
+  <script src="js/storage.js?v=20260816f"></script>
+  <script src="js/net.js?v=20260816f"></script>
+  <script src="js/app.js?v=20260816f"></script>
 </body>
 </html>

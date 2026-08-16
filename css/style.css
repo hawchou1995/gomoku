@@ -282,6 +282,27 @@ input { font-family: inherit; }
   border-radius: 10px;
   overflow: hidden;
   background: #e9e2d2; /* 棋盘浅色木纹底 */
+  transition: width 0.15s ease;
+}
+
+/* ── 棋盘缩放控制器 ─────────────────────────────── */
+.board-zoom {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
+  padding-bottom: 10px;
+}
+.board-zoom .zoom-label {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-dim);
+  min-width: 42px;
+  text-align: center;
+}
+.board-scroll {
+  overflow: auto;
+  width: 100%;
 }
 
 #board {
@@ -548,6 +569,27 @@ input { font-family: inherit; }
   transition: border-color 0.15s;
 }
 .history-item:hover { border-color: var(--accent); }
+
+.history-check {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+
+.history-item-body {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.history-item .history-export {
+  flex-shrink: 0;
+  margin: 0;
+}
 
 .history-item .result {
   font-size: 15px;

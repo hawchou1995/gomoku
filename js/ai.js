@@ -22,6 +22,29 @@
 
   var DIRS = [[1, 0], [0, 1], [1, 1], [1, -1]];
 
+  // ── Zobrist 哈希 + 置换表（2026-08-16 激进重构）──
+  // 消除换序/重复局面的冗余搜索，是加深深度的前提。棋盘 3 态 × 225 格 × 2 颜色。
+  var ZOBRIST = (function () {
+    var seed = 123456789;
+    function rnd() { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; }
+    var t = new Array(2);
+    for (var p = 0; p < 2; p++) {
+      t[p] = new Float64Array(SIZE * SIZE);
+      for (var i = 0; i < SIZE * SIZE; i++) t[p][i] = Math.floor(rnd() * 0xFFFFFFFF);
+    }
+    return t; // t[0]=黑哈希 t[1]=白哈希（用 p-1 索引）
+  })();
+
+  function zobristHash(board) {
+    var h = 0;
+    for (var i = 0; i < SIZE * SIZE; i++) {
+      var v = board[i];
+      if (v === EMPTY) continue;
+      h ^= ZOBRIST[v - 1][i];
+    }
+    return h >>> 0; // 归一为 uint32
+  }
+
   // ── 分值表 ──
   var SCORE = {
     WIN: 10000000,
@@ -57,7 +80,7 @@
     { depth: 4, cand: 22, noise: 0,    threat: 2 },  // 6 段
     { depth: 4, cand: 24, noise: 0,    threat: 3 },  // 7 段
     { depth: 5, cand: 26, noise: 0,    threat: 3 },  // 8 段
-    { depth: 7, cand: 30, noise: 0,    threat: 4 }   // 9 段（2026-08-16 depth 6→7：覆盖斜线多步杀链，如棋谱16 黑 E10 斜线 7 层五连）
+    { depth: 8, cand: 30, noise: 0,    threat: 4 }   // 9 段（2026-08-16 depth 7→8：黑先手 vs 稳健白方从 0%→100% 胜，白 6/7/8 稳定 100%、白 9 67%；9 段耗时实测 ~300ms/手，浏览器可接受）
   ];
 
   /**
@@ -381,10 +404,15 @@
           if (s.jumpR > 0) { if (s.jumpOpenR) open++; }
           else if (s.openR) open++;
           if (jumpTotal > 0) {
-            // 跳形：与 classifyPoint 同规则
+            // 跳形：与 classifyPoint 同规则。但【2026-08-16 跳三降级】跳三（隔空跳、
+            // 需补 gap 才连长）威胁远弱于连续活三——连续活三两端紧邻空位、对手堵一头
+            // 我仍能从另一头活四；跳三只有一个补 gap 点，对手堵 gap 即废。
+            // 根因实测：黑 9 vs 白 6，落 H10 孤点因凑出"跳活三"被评得高于落 H7 的
+            // "连续活三"（50513 vs 45004），黑方四处撒孤点、不延主线，24 手被白斜线杀。
+            // 修复：跳三按眠三（SLEEP3）计分，不再与连续活三同档；连续活三才 LIVE3。
             if (total >= 4) { v += SCORE.RUSH4; if (p === me) myT.rush4++; else opT.rush4++; }
             else if (total === 3) {
-              if (open === 2) { v += SCORE.LIVE3; if (p === me) myT.live3++; else opT.live3++; }
+              if (open === 2) { v += SCORE.SLEEP3; } // 跳三：降为眠三档，弱于连续活三
               else if (open === 1) v += SCORE.SLEEP3;
             }
             else if (total === 2 && open === 2) v += SCORE.LIVE2;
@@ -1049,16 +1077,15 @@
         opForcePts.push({ x: c2.x, y: c2.y, rank: ol.forceRank });
       }
     }
-    // 优先级：我方五连 > 对方五连（必防）> 我方必胜组合 > 对方必胜组合。
-    // 【2026-08-16 修正】我方真杀（rank>=3：四三/双冲四/活四成型）优先于对方成型点：
-    // 我方走真杀后对方每一步必应（冲四→活四→五连全程强制），对方的成型点
-    //（op-force/op-win）根本没机会落子——先手杀压制后手成型。
-    // 棋谱19 黑 25：黑 N7 四三（my-force rank3）vs 白 H5 活四成型（op-force rank4），
-    // 旧顺序防 H5 → 白 26 J5 冲四链反杀（白 30 五连）；正确走 N7 → 白全程必应 → 黑胜。
-    // op-win（对方落子即五连）仍最优先——对方已有四连时最急，保守先防。
+    // 优先级：我五连 > 我活四/四三（先手杀）> 对方五连 > 对方必胜组合。
+    // 【2026-08-16 关键修复】myForce（我方活四/四三/双冲四，落子后"我下一步必胜"）必须
+    // 优先于 opWin（对方落子即五连）——此前顺序 myWin > opWin > myForce 导致白方第32手
+    // 有自己的活四 J8 却去防黑方 M7 五连点（dec=op-win M7），放弃必胜活四被反杀。
+    // 落活四后对方必须先堵我活四（否则我下步五连），根本没机会落它的五连点=先手压制。
+    // myWin（我落子立即五连）仍最优先——那是"我这一步就赢"，比"活四后还需一步"更直接。
     if (myWin) return { move: myWin, kind: 'my-win' };
-    if (opWin) return { move: opWin, kind: 'op-win' };
     if (myForce) return { move: myForce, kind: 'my-force' };
+    if (opWin) return { move: opWin, kind: 'op-win' };
     if (opForce) {
       // 【2026-08-16】多成型点裁决：对方 ≥2 个 force 成型点（双四三/四三+活四等）时，
       // 先搜"一个点废全部"的万能防守点（棋谱23：黑 L7/M9 双四三，白 18 仅 J9 能活）；
@@ -1110,7 +1137,7 @@
    * negamax + α-β + killer move + 历史表（v3）。
    * 每层先做一步必胜/必防截断，显著压缩杀棋搜索树。
    */
-  function negamax(board, me, depth, alpha, beta, deadline, ply, killers, history, forbidEnabled) {
+  function negamax(board, me, depth, alpha, beta, deadline, ply, killers, history, forbidEnabled, tt) {
     if (depth <= 0 || Date.now() > deadline) return evaluateBoard(board, me);
 
     // 威胁截断只在浅层做（depth <= 2）：一步必胜 → 高分（越快越高）；对方一步必胜 → 低分
@@ -1120,6 +1147,18 @@
       if (t) return SCORE.WIN - ply;
       var t2 = quickTactic(board, opp(me), forbidEnabled);
       if (t2) return -(SCORE.WIN - ply);
+    }
+
+    // ── 置换表：已搜过的局面直接复用 ──
+    var h = 0;
+    if (tt) {
+      h = zobristHash(board);
+      var ent = tt.get(h);
+      if (ent && ent.depth >= depth) {
+        if (ent.flag === 1) return ent.v;            // 精确值
+        if (ent.flag === 2 && ent.v <= alpha) return alpha; // 上界
+        if (ent.flag === 3 && ent.v >= beta) return beta;   // 下界
+      }
     }
 
     var near = collectNear(board);
@@ -1144,11 +1183,12 @@
     }
 
     var best = -Infinity;
+    var origAlpha = alpha;
     for (var i = 0; i < ordered.length; i++) {
       if (Date.now() > deadline) break;
       var c = ordered[i];
       set(board, c.x, c.y, me);
-      var v = -negamax(board, opp(me), depth - 1, -beta, -alpha, deadline, ply + 1, killers, history, forbidEnabled);
+      var v = -negamax(board, opp(me), depth - 1, -beta, -alpha, deadline, ply + 1, killers, history, forbidEnabled, tt);
       set(board, c.x, c.y, EMPTY);
       if (v > best) best = v;
       if (v > alpha) alpha = v;
@@ -1163,6 +1203,14 @@
         }
         break;
       }
+    }
+
+    // ── 回存置换表（精确 / 上界 / 下界，深度 = 当前剩余 depth）──
+    if (tt && Date.now() <= deadline) {
+      var flag = 1;
+      if (best <= origAlpha) flag = 2;      // 上界
+      else if (best >= beta) flag = 3;      // 下界
+      tt.set(h, { v: best, depth: depth, flag: flag });
     }
     return best;
   }
@@ -1184,6 +1232,11 @@
   function getBestMove(board, player, level, deadline, forbidEnabled, history) {
     level = Math.max(1, Math.min(9, level | 0));
     var cfg = LEVELS[level - 1];
+    // 【2026-08-16 实验】GOMOKU_DEPTH 临时覆盖搜索深度（测"加深搜索"的真实收益，
+    // 决定是否永久改 LEVELS 九段配置，以及要不要 Web Worker 化）
+    if (typeof process !== 'undefined' && process.env.GOMOKU_DEPTH) {
+      cfg = Object.assign({}, cfg, { depth: parseInt(process.env.GOMOKU_DEPTH, 10) });
+    }
     var dl = deadline || Date.now() + TIME_BUDGETS[level - 1];
 
     // 空盘：落天元
@@ -1328,9 +1381,10 @@
     // 实测九段 0:5 输八段（12 手）——决策层抢搜索的活：活三/活四价值搜索评估已编码，
     // depth 6 能发现活四链；决策层重复干预反而破坏布局/漏防。全局进攻交给搜索。
 
-    // 迭代加深搜索
+    // 迭代加深搜索（置换表跨深度复用：上一深度的精确/边界值供下一深度剪枝）
     var killers = [];
     var history = {};
+    var tt = new Map(); // Zobrist 哈希 → {v, depth, flag}
     var bestMove = cands[0];
     var bestScore = -Infinity;
     for (var depth = 1; depth <= cfg.depth; depth++) {
@@ -1342,7 +1396,7 @@
         if (Date.now() > dl) break;
         var c2 = cands[k];
         set(board, c2.x, c2.y, player);
-        var v = -negamax(board, opp(player), depth - 1, -beta, -alpha, dl, 1, killers, history, forbidEnabled);
+        var v = -negamax(board, opp(player), depth - 1, -beta, -alpha, dl, 1, killers, history, forbidEnabled, tt);
         set(board, c2.x, c2.y, EMPTY);
         if (v > curScore) { curScore = v; curBest = c2; }
         if (v > alpha) alpha = v;
