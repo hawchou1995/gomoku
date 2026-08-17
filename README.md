@@ -85,6 +85,14 @@ window.PEER_CONFIG = {
 
 ---
 
+## 在线部署（已上线）
+
+本仓库已启用 **GitHub Pages** 永久部署（main 分支根目录）：
+
+**https://hawchou1995.github.io/gomoku/**
+
+> 2026-08-17 已从 CloudStudio 临时托管迁移至 GitHub Pages（原临时链接已下线）。
+
 ## 部署到公网（互联网联机）
 
 静态页面可部署到任意静态托管（GitHub Pages / CloudStudio / Nginx 等），
@@ -96,6 +104,7 @@ git init && git add . && git commit -m "gomoku"
 git remote add origin <你的仓库地址>
 git push -u origin main
 # 仓库 Settings → Pages → 选择 main 分支 → 生效
+# 或命令行：gh api -X POST repos/<owner>/<repo>/pages -f "source[branch]=main" -f "source[path]=/"
 ```
 
 若目标用户在国内网络，建议同时自托管信令并修改 `PEER_CONFIG`。
