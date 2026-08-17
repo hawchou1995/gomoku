@@ -185,10 +185,15 @@ a:focus-visible,
 
 .mode-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 16px;
-  max-width: 900px;
+  max-width: 960px;
   margin: 0 auto;
+}
+
+/* 4 列并排时收窄内边距，避免卡片过挤 */
+@media (min-width: 1024px) {
+  .mode-card { padding: 20px 16px; }
 }
 
 .mode-card {
@@ -814,12 +819,21 @@ a:focus-visible,
   to { transform: translateX(-50%) translateY(0); opacity: 1; }
 }
 
+/* ── 响应式：平板（2×2）─────────────── */
+@media (max-width: 1023px) {
+  .mode-grid { grid-template-columns: repeat(2, 1fr); max-width: 560px; }
+}
+
 /* ── 响应式：移动端 ──────────────────── */
 @media (max-width: 860px) {
   .game-layout { grid-template-columns: 1fr; }
   .chat-box { height: 220px; }
-  .mode-grid { grid-template-columns: 1fr; max-width: 480px; }
   .home-title { font-size: 32px; }
+}
+
+/* 窄屏：单列（4×1 纵向堆叠） */
+@media (max-width: 639px) {
+  .mode-grid { grid-template-columns: 1fr; max-width: 480px; }
 }
 
 @media (max-width: 480px) {
