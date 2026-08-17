@@ -24,6 +24,10 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
+html {
+  color-scheme: dark;
+}
+
 html, body { height: 100%; }
 
 body {
@@ -40,6 +44,24 @@ button { font-family: inherit; cursor: pointer; }
 input { font-family: inherit; }
 
 .hidden { display: none !important; }
+
+/* 键盘可达性：所有可交互元素显示可见焦点环（点击不显示，键盘显示） */
+button:focus-visible,
+input:focus-visible,
+a:focus-visible,
+.level-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* 动画偏好：系统要求减弱动态时禁用动效 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
 
 /* ── 顶栏 ─────────────────────────────── */
 .topbar {
@@ -228,7 +250,7 @@ input { font-family: inherit; }
   color: var(--text-dim);
   font-size: 13px;
   font-family: var(--mono);
-  transition: all 0.15s;
+  transition: border-color 0.15s, color 0.15s, background-color 0.15s;
 }
 .level-btn:hover { border-color: var(--accent); color: var(--accent); }
 .level-btn.active {
@@ -336,7 +358,7 @@ input { font-family: inherit; }
   padding: 8px 10px;
   border-radius: var(--radius-sm);
   border: 1px solid transparent;
-  transition: all 0.15s;
+  transition: border-color 0.15s, background-color 0.15s;
 }
 .player-row.active {
   border-color: var(--accent);
@@ -439,7 +461,7 @@ input { font-family: inherit; }
   height: 18px;
   background: var(--text-dim);
   border-radius: 50%;
-  transition: all 0.2s;
+  transition: left 0.2s, background-color 0.2s;
 }
 
 .toggle-row input:checked + .toggle-switch {
@@ -482,6 +504,22 @@ input { font-family: inherit; }
 }
 .ai-setup .btn.wide {
   margin-top: 4px;
+}
+
+/* 开局设置区内的段位选择行（人机/本地双人共用） */
+.setup-level-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.setup-level-label {
+  font-size: 12px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+.setup-level-row .level-picker {
+  flex: 1;
+  margin-top: 0;
 }
 
 /* ── 聊天 ─────────────────────────────── */
@@ -648,6 +686,9 @@ input { font-family: inherit; }
   width: 100%;
   max-width: 400px;
   padding: 24px;
+  max-height: min(80vh, 560px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   animation: pop 0.18s ease-out;
 }
 

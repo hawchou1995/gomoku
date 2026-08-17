@@ -345,6 +345,7 @@
   // ─────────────────────────── 状态条 / 玩家栏 ───────────────────────────
 
   function seatName(seat) {
+    if (state.mode === 'pvp') return seat === 'black' ? '黑方' : '白方';
     if (state.mode === 'ai') {
       if (myColor() === E.BLACK) return seat === 'black' ? '你' : 'AI ' + state.aiLevel + ' 段';
       return seat === 'black' ? 'AI ' + state.aiLevel + ' 段' : '你';
@@ -356,6 +357,11 @@
 
   function renderPlayers(players) {
     // players: [{seat, name}]（联机）
+    if (state.mode === 'pvp') {
+      $('p-black-name').textContent = '黑方';
+      $('p-white-name').textContent = '白方';
+      return;
+    }
     if (state.mode === 'ai') {
       var youBlack = myColor() === E.BLACK;
       $('p-black-name').textContent = youBlack ? '你' : 'AI ' + state.aiLevel + ' 段';
@@ -384,12 +390,16 @@
       }
       return;
     }
-    if (state.mode !== 'ai' && !state.net) { el.textContent = '连接中…'; return; }
-    if (state.mode === 'ai') {
+    if (state.mode !== 'ai' && state.mode !== 'pvp' && !state.net) { el.textContent = '连接中…'; return; }
+    if (state.mode === 'ai' || state.mode === 'pvp') {
       // 未开局：状态条显示等待，不提示轮次
       if (!state.aiStarted) { el.textContent = '等待开局…'; return; }
-      var playerColor = myColor();
-      el.textContent = (g.turn === playerColor ? '轮到你' : 'AI 思考中…');
+      if (state.mode === 'ai') {
+        var playerColor = myColor();
+        el.textContent = (g.turn === playerColor ? '轮到你' : 'AI 思考中…');
+        return;
+      }
+      el.textContent = '轮到' + (g.turn === E.BLACK ? '黑方落子' : '白方落子');
       return;
     }
     if (state.mySeat === 'spectator') { el.textContent = '观战中'; return; }
@@ -398,7 +408,8 @@
   }
 
   function highlightTurn() {
-    var seat = (state.game.over || (state.mode === 'ai' && !state.aiStarted)) ? null : (state.game.turn === E.BLACK ? 'black' : 'white');
+    var aiNotStarted = (state.mode === 'ai' || state.mode === 'pvp') && !state.aiStarted;
+    var seat = (state.game.over || aiNotStarted) ? null : (state.game.turn === E.BLACK ? 'black' : 'white');
     $('p-black').classList.toggle('active', seat === 'black');
     $('p-white').classList.toggle('active', seat === 'white');
   }
@@ -410,12 +421,13 @@
     updateSetupLock();
     var g = state.game;
     var inNet = state.net && state.mySeat !== 'spectator';
-    var canAct = !g.over && (state.mode === 'ai' ? true : inNet &&
+    var localAct = state.mode === 'ai' || state.mode === 'pvp'; // 人机/本地双人当前设备即可操作
+    var canAct = !g.over && (localAct ? true : inNet &&
       ((g.turn === E.BLACK ? 'black' : 'white') === state.mySeat));
-    // 悔棋：人机随时可悔；联机非观战、未结束、无待确认请求时可发起
-    $('btn-undo').disabled = !(g.moves.length > 0 && !g.over && (state.mode === 'ai' ? true : inNet && !state.pendingUndo));
-    $('btn-resign').disabled = !(!g.over && (state.mode === 'ai' ? true : inNet));
-    $('btn-restart').disabled = !(state.mode === 'ai' ? true : inNet);
+    // 悔棋：人机/本地双人随时可悔；联机非观战、未结束、无待确认请求时可发起
+    $('btn-undo').disabled = !(g.moves.length > 0 && !g.over && (localAct ? true : inNet && !state.pendingUndo));
+    $('btn-resign').disabled = !(!g.over && (localAct ? true : inNet));
+    $('btn-restart').disabled = !(localAct ? true : inNet);
     // 导出按钮：有落子即可导出
     $('btn-export-json').disabled = !(g.moves.length > 0);
     $('btn-export-csv').disabled = !(g.moves.length > 0);
@@ -512,13 +524,16 @@
   function doMove(x, y) {
     var g = state.game;
     if (g.over) return;
-    if (state.mode === 'ai') {
+    if (state.mode === 'ai' || state.mode === 'pvp') {
       // 【2026-08-16】未点「开始对局」禁止落子（进入对局界面仅确认设置，开局才落子）
       if (!state.aiStarted) { toast('请先点「开始对局」再落子'); return; }
-      // 人机：仅玩家回合本地落子
-      var playerColor = myColor();
-      if (g.turn !== playerColor) return;
-      // 三手交换开局：黑 1 必须天元
+      var mover = g.turn; // 当前回合方（黑/白）——本地双人即落子方，人机即玩家当前执子
+      if (state.mode === 'ai') {
+        // 人机：仅玩家回合本地落子
+        var playerColor = myColor();
+        if (g.turn !== playerColor) return;
+      }
+      // 三手交换开局：黑 1 必须天元（人机/本地双人均适用）
       if (state.swapEnabled && g.moves.length === 0 && !(x === 7 && y === 7)) {
         toast('三手交换规则：黑 1 必须落天元（H8）');
         return;
@@ -530,13 +545,13 @@
       }
       A.place();
       state.lastMove = { x: x, y: y };
-      animateStone(x, y, playerColor, drawBoard);
+      animateStone(x, y, mover, drawBoard);
       // 【2026-08-16】三手交换裁决待定时（前三手齐、未裁决）不调度 AI——
       // decideSwap → applySwap 会根据裁决结果统一调度（否则与 doMove 的
       // scheduleAI 双定时器竞态：AI 连落两手，第二手回合错位 → 换手后玩家无法落子）
       var swapPending = state.swapEnabled && !state.swapDecided && state.game.moves.length === 3 && !g.over;
       afterLocalMove(r);
-      if (!g.over && !swapPending) scheduleAI();
+      if (!g.over && !swapPending && state.mode === 'ai') scheduleAI();
     } else if (state.net) {
       // 联机：任何端都只发请求给 host（host 直接本地执行 + 广播）
       if (state.mySeat === 'spectator') return;
@@ -577,7 +592,8 @@
    */
   function decideSwap() {
     state.swapDecided = true;
-    var playerIsWhite = myColor() === E.WHITE && !state.swapped;
+    // pvp：白方即另一位玩家，由其真人裁决；人机：玩家执白才弹窗，AI 执白自动裁决
+    var playerIsWhite = (state.mode === 'pvp') ? true : (myColor() === E.WHITE && !state.swapped);
     if (playerIsWhite) {
       var closeSw = openModal(
         '<div class="modal-title">三手交换</div>' +
@@ -607,15 +623,15 @@
 
   function applySwap(doSwap) {
     state.swapped = doSwap;
-    if (state.mode === 'ai') renderPlayers(null); // 玩家名随执子刷新
+    if (state.mode === 'ai' || state.mode === 'pvp') renderPlayers(null); // 玩家名随执子刷新
     refreshUI();
-    if (doSwap) toast('已交换：' + (state.playerFirst ? '你改执白，AI 执黑' : 'AI 改执白，你执黑'));
+    if (doSwap) toast(state.mode === 'pvp' ? '已交换：白方改执黑续下' : (state.playerFirst ? '你改执白，AI 执黑' : 'AI 改执白，你执黑'));
     else toast('不交换，继续当前执子');
     if (!state.game.over) {
-      // 交换后仍由当前回合方续下（原白方执黑 / 原黑方执白）
+      // 交换后仍由当前回合方续下（原白方执黑 / 原黑方执白）；人机再补 AI 调度
       var next = myColor() === state.game.turn;
       if (state.mode === 'ai' && !next) scheduleAI();
-      else if (state.mode === 'ai' && next) drawBoard();
+      else drawBoard();
     }
   }
 
@@ -884,16 +900,24 @@
    * 每次 refreshUI 调用，保证「进入对局可调 → 落子锁定 → 结束解锁改设置再开」闭环。
    */
   function updateSetupLock() {
-    var ai = state.mode === 'ai';
-    $('ai-setup').style.display = ai ? '' : 'none';
-    var locked = ai && state.aiStarted && !state.game.over;
-    $('toggle-first').disabled = locked;
+    var showSetup = state.mode === 'ai' || state.mode === 'pvp';
+    $('ai-setup').style.display = showSetup ? '' : 'none';
+    var isAi = state.mode === 'ai';
+    // 本地双人无"玩家先手"概念（黑先白后固定），也无 AI 段位；隐藏对应行
+    var firstRow = $('toggle-first-row'), levelRow = $('setup-level-row');
+    if (firstRow) firstRow.style.display = isAi ? '' : 'none';
+    if (levelRow) levelRow.style.display = isAi ? '' : 'none';
+    var locked = showSetup && state.aiStarted && !state.game.over;
+    if ($('toggle-first')) $('toggle-first').disabled = locked;
     $('toggle-forbid').disabled = locked;
     $('toggle-swap').disabled = locked;
-    $('toggle-first-row').classList.toggle('disabled', locked);
+    if ($('toggle-first-row')) $('toggle-first-row').classList.toggle('disabled', locked);
     $('toggle-forbid-row').classList.toggle('disabled', locked);
     $('toggle-swap-row').classList.toggle('disabled', locked);
     $('btn-start-ai').disabled = locked;
+    // 段位按钮在开局后锁定
+    var lbtns = document.querySelectorAll('.ai-setup .level-btn');
+    lbtns.forEach(function (b) { b.disabled = locked; });
   }
 
   /**
@@ -935,6 +959,40 @@
       aiFirstMove();
     }
     refreshUI(); // 【2026-08-16】开局后刷新状态条/开关锁定（aiStarted 已置位；新开局无残局时不走 startNewGame，此前状态条停留在「等待开局…」）
+  }
+
+  /**
+   * 进入本地双人对局界面（不落子）。
+   * 段位/先手开关在开局设置区；本地双人固定黑先白后，可选禁手/三手交换。
+   */
+  function enterPvpGame() {
+    goHomeInternal();
+    state.mode = 'pvp';
+    state.isHost = false;
+    state.playerFirst = true; // 本地双人固定黑先
+    state.aiLevel = 4;
+    state.aiStarted = false;
+    state.swapDecided = false;
+    state.swapped = false;
+    startNewGame(true);
+    showView('game');
+    $('conn-indicator').classList.add('hidden');
+    $('chat-box').style.display = 'none';
+    renderPlayers(null);
+    updateSetupLock();
+    toast('本地双人：黑先白后，请确认下方设置，点「开始对局」开局');
+  }
+
+  /** 点「开始对局」：本地双人真正开局（残局先清盘）。 */
+  function beginPvpGame() {
+    if (state.mode !== 'pvp') return;
+    if (state.aiStarted && !state.game.over) return;
+    state.aiStarted = true;
+    if (state.game.moves.length > 0) startNewGame(true);
+    renderPlayers(null);
+    startTicker();
+    toast(state.swapEnabled ? '本地双人 · 黑先白后（黑 1 天元，前三手后白方可交换）' : '本地双人 · 黑先白后');
+    refreshUI();
   }
 
   /**
@@ -1150,20 +1208,25 @@
 
   function doUndo() {
     var g = state.game;
-    if (state.mode === 'ai') {
+    if (state.mode === 'ai' || state.mode === 'pvp') {
       if (g.moves.length < 1) return;
-      // AI 先手：撤 1 步（AI 的）→ 玩家落子；AI 先手且刚开局：撤 AI 的第一步
-      if (state.playerFirst) {
-        if (g.moves.length < 2) return;
-        g.undo(2);
+      if (state.mode === 'ai') {
+        // AI 先手：撤 1 步（AI 的）→ 玩家落子；玩家先手：撤 2 步（玩家+AI 的回合约）
+        if (state.playerFirst) {
+          if (g.moves.length < 2) return;
+          g.undo(2);
+        } else {
+          if (g.moves.length < 1) return;
+          g.undo(1);
+        }
       } else {
-        if (g.moves.length < 1) return;
+        // 本地双人：撤 1 步（当前回合方落子）
         g.undo(1);
       }
       A.undo();
       state.lastMove = g.moves.length ? { x: g.moves[g.moves.length - 1].x, y: g.moves[g.moves.length - 1].y } : null;
       drawBoard(); refreshUI();
-      toast('已悔棋，轮到你落子');
+      toast('已悔棋，' + (g.turn === E.BLACK ? '黑方' : '白方') + '落子');
       return;
     }
     if (state.net && !state.pendingUndo) {
@@ -1182,13 +1245,32 @@
     var g = state.game;
     if (g.over) return;
     // 【2026-08-16】未点「开始对局」时认输无效
-    if (state.mode === 'ai' && !state.aiStarted) { toast('对局尚未开始'); return; }
+    if ((state.mode === 'ai' || state.mode === 'pvp') && !state.aiStarted) { toast('对局尚未开始'); return; }
     if (state.mode === 'ai') {
       g.over = { winner: E.WHITE, line: null, reason: 'resign' };
       A.lose();
       showGameOver(g.over, false);
       saveHistory(g.over);
       refreshUI();
+      return;
+    }
+    if (state.mode === 'pvp') {
+      // 本地双人：任一方认输，由按下认输的一方选择谁认输
+      var close2 = openModal(
+        '<div class="modal-title">认输</div>' +
+        '<div class="modal-body">哪一方认输？认输方判负，另一方获胜。</div>' +
+        '<div class="modal-actions">' +
+        '<button class="btn outline" data-dismiss>取消</button>' +
+        '<button class="btn outline" id="m-resign-black">黑方认输</button>' +
+        '<button class="btn primary" id="m-resign-white">白方认输</button>' +
+        '</div>'
+      );
+      $('m-resign-black').addEventListener('click', function () {
+        close2(); finishResign(E.BLACK);
+      });
+      $('m-resign-white').addEventListener('click', function () {
+        close2(); finishResign(E.WHITE);
+      });
       return;
     }
     var close = openModal(
@@ -1205,6 +1287,17 @@
     });
   }
 
+  /** pvp 认输收尾：loser 判负，winner 获胜。 */
+  function finishResign(loser) {
+    var g = state.game;
+    var winner = E.opp(loser);
+    g.over = { winner: winner, line: null, reason: 'resign' };
+    if (winner === E.BLACK) A.win(); else A.lose();
+    showGameOver(g.over, winner === E.BLACK);
+    saveHistory(g.over);
+    refreshUI();
+  }
+
   function doRestart() {
     if (state.mode === 'ai') {
       // 【2026-08-16】先关闭任何弹窗（三手交换选择窗等）——弹窗残留会挡住
@@ -1215,7 +1308,19 @@
       // AI 先手：新局首步由 AI 落子（此前只 startNewGame 导致死局）
       if (state.playerFirst) startTicker();
       else aiFirstMove();
+      refreshUI();
       toast('已重新开局');
+      return;
+    }
+    if (state.mode === 'pvp') {
+      $('modal-root').classList.add('hidden');
+      startNewGame(true);
+      state.aiStarted = true; // 沿用当前设置并保持锁定
+      state.swapDecided = false;
+      state.swapped = false;
+      startTicker();
+      refreshUI();
+      toast('已重新开局：黑先白后');
       return;
     }
     if (!state.net) return;
@@ -1270,6 +1375,15 @@
           // AI 先手：新局首步由 AI 落子（此前只 startNewGame 导致死局）
           if (state.playerFirst) startTicker();
           else aiFirstMove();
+          refreshUI();
+        }
+        else if (state.mode === 'pvp') {
+          startNewGame(true);
+          state.aiStarted = true;
+          state.swapDecided = false;
+          state.swapped = false;
+          startTicker();
+          refreshUI();
         }
         else if (state.net) { doRestart(); }
       });
@@ -1279,6 +1393,7 @@
 
   function modeLabel() {
     if (state.mode === 'ai') return '人机对战';
+    if (state.mode === 'pvp') return '本地双人';
     if (state.mode === 'lan') return '局域网联机';
     if (state.mode === 'online') return '互联网联机';
     return '';
@@ -1654,6 +1769,10 @@
   $('btn-enter-ai').addEventListener('click', function () {
     enterAIGame(state.aiLevel);
   });
+  // 本地双人：进入对局界面，黑先白后
+  $('btn-enter-pvp').addEventListener('click', function () {
+    enterPvpGame();
+  });
   $('btn-lan-create').addEventListener('click', function () {
     if (!state.peerAvailable) { toast('PeerJS 加载失败，联机不可用（可能离线）'); return; }
     askNameAndCreate('lan');
@@ -1671,8 +1790,8 @@
     askCodeAndJoin('online');
   });
 
-  // 段位选择
-  var levelBtns = document.querySelectorAll('.level-btn');
+  // 段位选择（对局界面开局设置区内：与先手/禁手/三手交换开关并列）
+  var levelBtns = document.querySelectorAll('.ai-setup .level-btn');
   levelBtns.forEach(function (btn) {
     btn.addEventListener('click', function () {
       state.aiLevel = parseInt(btn.dataset.level, 10);
@@ -1680,7 +1799,7 @@
     });
   });
   // 默认选中 4 段
-  document.querySelector('.level-btn[data-level="4"]').classList.add('active');
+  document.querySelector('.ai-setup .level-btn[data-level="4"]').classList.add('active');
 
   // ─────────────────────────── AlphaZero 引擎 ───────────────────────────
 
@@ -1729,7 +1848,7 @@
     var close = openModal(
       '<div class="modal-title">创建房间</div>' +
       '<div class="modal-field"><label>你的昵称</label>' +
-      '<input id="m-name" type="text" maxlength="12" placeholder="房主" autocomplete="off"></div>' +
+      '<input id="m-name" type="text" maxlength="12" placeholder="房主" autocomplete="off" spellcheck="false" name="nickname"></div>' +
       '<div class="modal-actions">' +
       '<button class="btn outline" data-dismiss>取消</button>' +
       '<button class="btn primary" id="m-create-ok">创建</button>' +
@@ -1749,9 +1868,9 @@
     var close = openModal(
       '<div class="modal-title">加入房间</div>' +
       '<div class="modal-field"><label>房间码</label>' +
-      '<input id="m-code" class="code-input" type="text" maxlength="4" placeholder="4 位房间码" autocomplete="off"></div>' +
+      '<input id="m-code" class="code-input" type="text" maxlength="4" placeholder="4 位房间码" autocomplete="off" spellcheck="false" name="room-code"></div>' +
       '<div class="modal-field"><label>你的昵称</label>' +
-      '<input id="m-name2" type="text" maxlength="12" placeholder="玩家" autocomplete="off"></div>' +
+      '<input id="m-name2" type="text" maxlength="12" placeholder="玩家" autocomplete="off" spellcheck="false" name="nickname"></div>' +
       '<div class="modal-actions">' +
       '<button class="btn outline" data-dismiss>取消</button>' +
       '<button class="btn primary" id="m-join-ok">加入</button>' +
@@ -1809,7 +1928,7 @@
   // 【2026-08-16 重构】开关与「开始对局」按钮同在对局界面，确认好选项再开局；
   // 对局中（aiStarted && !over）锁定，对局结束解锁可改设置再开新局。
   $('toggle-first').addEventListener('change', function () {
-    if (state.mode === 'ai' && state.aiStarted && !state.game.over) {
+    if ((state.mode === 'ai' || state.mode === 'pvp') && state.aiStarted && !state.game.over) {
       this.checked = !this.checked; // 防御：disabled 已挡住 UI 操作
       toast('对局已开始，设置已锁定');
       return;
@@ -1820,7 +1939,7 @@
     toast(this.checked ? '已切换为玩家先手（黑棋）' : '已切换为 AI 先手（黑棋）');
   });
   $('toggle-forbid').addEventListener('change', function () {
-    if (state.mode === 'ai' && state.aiStarted && !state.game.over) {
+    if ((state.mode === 'ai' || state.mode === 'pvp') && state.aiStarted && !state.game.over) {
       this.checked = !this.checked;
       toast('对局已开始，设置已锁定');
       return;
@@ -1829,7 +1948,7 @@
     toast(this.checked ? '黑棋禁手已开启（三三/四四/长连禁手）' : '黑棋禁手已关闭（无禁手规则）');
   });
   $('toggle-swap').addEventListener('change', function () {
-    if (state.mode === 'ai' && state.aiStarted && !state.game.over) {
+    if ((state.mode === 'ai' || state.mode === 'pvp') && state.aiStarted && !state.game.over) {
       this.checked = !this.checked;
       toast('对局已开始，设置已锁定');
       return;
@@ -1840,6 +1959,7 @@
 
   // 对局界面「开始对局」按钮：真正开局（moves>0 时按钮禁用，结束后可再开局）
   $('btn-start-ai').addEventListener('click', function () {
+    if (state.mode === 'pvp') { beginPvpGame(); return; }
     beginAIGame();
   });
 

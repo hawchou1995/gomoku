@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0f1115">
   <title>五子棋 · Gomoku</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="css/style.css">
@@ -53,18 +54,27 @@
           </div>
           <h2 class="mode-name">人机对战</h2>
           <p class="mode-desc">一至九段 AI，从新手友好到接近满血</p>
-          <div class="level-picker" id="level-picker" aria-label="选择段位">
-            <button class="level-btn" data-level="1">1</button><button class="level-btn" data-level="2">2</button>
-            <button class="level-btn" data-level="3">3</button><button class="level-btn" data-level="4">4</button>
-            <button class="level-btn" data-level="5">5</button><button class="level-btn" data-level="6">6</button>
-            <button class="level-btn" data-level="7">7</button><button class="level-btn" data-level="8">8</button>
-            <button class="level-btn" data-level="9">9</button>
-          </div>
           <div class="engine-picker">
             <span class="engine-label">引擎</span>
             <span class="engine-status" id="engine-status">融合引擎（启发式 + 自学习）</span>
           </div>
           <button class="btn primary wide" id="btn-enter-ai">进入对局</button>
+        </section>
+
+        <section class="mode-card" data-mode="pvp">
+          <div class="mode-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="8" cy="12" r="3.2"></circle><circle cx="16" cy="12" r="3.2"></circle>
+              <path d="M8 8.8v-2M16 8.8v-2M8 15.2v2M16 15.2v2"></path>
+            </svg>
+          </div>
+          <h2 class="mode-name">本地双人</h2>
+          <p class="mode-desc">同屏轮流落子，一台设备与朋友对弈</p>
+          <div class="engine-picker">
+            <span class="engine-label">规则</span>
+            <span class="engine-status">黑先白后 · 可选禁手</span>
+          </div>
+          <button class="btn primary wide" id="btn-enter-pvp">进入对局</button>
         </section>
 
         <section class="mode-card" data-mode="lan">
@@ -101,10 +111,10 @@
         <div class="board-panel">
           <div class="game-status" id="game-status">准备中…</div>
           <div class="board-zoom">
-            <button class="btn ghost sm" id="btn-zoom-out" title="缩小棋盘">−</button>
+            <button class="btn ghost sm" id="btn-zoom-out" title="缩小棋盘" aria-label="缩小棋盘">−</button>
             <span class="zoom-label" id="zoom-label">100%</span>
-            <button class="btn ghost sm" id="btn-zoom-in" title="放大棋盘">＋</button>
-            <button class="btn ghost sm" id="btn-zoom-reset" title="重置缩放">重置</button>
+            <button class="btn ghost sm" id="btn-zoom-in" title="放大棋盘" aria-label="放大棋盘">＋</button>
+            <button class="btn ghost sm" id="btn-zoom-reset" title="重置缩放" aria-label="重置缩放">重置</button>
           </div>
           <div class="board-scroll">
             <div class="board-wrap">
@@ -127,9 +137,19 @@
             </div>
           </div>
 
-          <!-- 开局设置区（仅人机模式）：确认好选项再开局，落子后锁定 -->
+          <!-- 开局设置区（人机/本地双人模式）：确认好选项再开局，落子后锁定 -->
           <div class="ai-setup" id="ai-setup">
             <div class="setup-head">开局设置 <span class="setup-hint">落子后锁定</span></div>
+            <div class="setup-level-row" id="setup-level-row">
+              <span class="setup-level-label" id="setup-level-label">AI 段位</span>
+              <div class="level-picker" id="level-picker" aria-label="选择段位">
+                <button class="level-btn" data-level="1">1</button><button class="level-btn" data-level="2">2</button>
+                <button class="level-btn" data-level="3">3</button><button class="level-btn" data-level="4">4</button>
+                <button class="level-btn" data-level="5">5</button><button class="level-btn" data-level="6">6</button>
+                <button class="level-btn" data-level="7">7</button><button class="level-btn" data-level="8">8</button>
+                <button class="level-btn" data-level="9">9</button>
+              </div>
+            </div>
             <div class="toggles">
               <label class="toggle-row" id="toggle-first-row">
                 <span class="toggle-label">玩家先手</span>
@@ -196,7 +216,7 @@
     </div>
 
     <!-- ═══ 提示 Toast ═══ -->
-    <div id="toast" class="toast hidden"></div>
+    <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 
   </div>
 
