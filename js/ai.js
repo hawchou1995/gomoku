@@ -382,8 +382,8 @@
    */
   function evaluateBoard(board, me) {
     var score = 0;
-    var myT = { live4: 0, rush4: 0, live3: 0 };
-    var opT = { live4: 0, rush4: 0, live3: 0 };
+    var myT = { live4: 0, rush4: 0, live3: 0, sleep3: 0, live2: 0 };
+    var opT = { live4: 0, rush4: 0, live3: 0, sleep3: 0, live2: 0 };
     for (var y = 0; y < SIZE; y++) {
       for (var x = 0; x < SIZE; x++) {
         var p = get(board, x, y);
@@ -412,10 +412,10 @@
             // 修复：跳三按眠三（SLEEP3）计分，不再与连续活三同档；连续活三才 LIVE3。
             if (total >= 4) { v += SCORE.RUSH4; if (p === me) myT.rush4++; else opT.rush4++; }
             else if (total === 3) {
-              if (open === 2) { v += SCORE.SLEEP3; } // 跳三：降为眠三档，弱于连续活三
-              else if (open === 1) v += SCORE.SLEEP3;
+              v += SCORE.SLEEP3; // 跳三：降为眠三档，弱于连续活三
+              if (p === me) myT.sleep3++; else opT.sleep3++;
             }
-            else if (total === 2 && open === 2) v += SCORE.LIVE2;
+            else if (total === 2 && open === 2) { v += SCORE.LIVE2; if (p === me) myT.live2++; else opT.live2++; }
           } else {
             if (total === 4) {
               if (open >= 2) { v += SCORE.LIVE4; if (p === me) myT.live4++; else opT.live4++; }
@@ -423,9 +423,12 @@
             }
             else if (total === 3) {
               if (open === 2) { v += SCORE.LIVE3; if (p === me) myT.live3++; else opT.live3++; }
-              else if (open === 1) v += SCORE.SLEEP3;
+              else if (open === 1) { v += SCORE.SLEEP3; if (p === me) myT.sleep3++; else opT.sleep3++; }
             }
-            else if (total === 2) v += open === 2 ? SCORE.LIVE2 : SCORE.SLEEP2;
+            else if (total === 2) {
+              if (open === 2) { v += SCORE.LIVE2; if (p === me) myT.live2++; else opT.live2++; }
+              else v += SCORE.SLEEP2;
+            }
           }
           score += sign * v * POS_WEIGHT[y * SIZE + x];
         }
@@ -435,6 +438,14 @@
     score += (myT.live4 - opT.live4) * SCORE.LIVE4 * 8;
     score += (myT.rush4 - opT.rush4) * SCORE.RUSH4 * 2;
     score += (myT.live3 - opT.live3) * SCORE.LIVE3 * 2;
+    // 【2026-08-18 进攻加权·先手节奏】轮到走棋方（me）有成形攻击链时局面更优：
+    // 活三/冲四/双活二/眠三都是进攻形态，先手在握应推进攻击而不是平铺防守。
+    // 数值远低于 force 级（一步成五/活四/四三在决策层与搜索内 quickTactic 已截断，
+    // 不会被此值翻盘），仅用于在"进攻 vs 防守静态价值接近"时把天平推向进攻。
+    score += myT.live3 * SCORE.LIVE3;            // +1W / 活三（两步成杀链）
+    score += myT.rush4 * (SCORE.RUSH4 >> 1);     // +5W / 冲四（一步成五链）
+    score += myT.live2 * SCORE.LIVE2;            // +300 / 活二（攻击种子积累）
+    score += myT.sleep3 * (SCORE.SLEEP3 >> 1);   // +500 / 眠三（潜在冲四线）
     return score;
   }
 
@@ -1045,6 +1056,72 @@
   }
 
   /**
+   * 【2026-08-18 进攻优先】我方是否存在"成型攻击先手"：
+   * 落子即形成 force rank>=2 的攻击形态（双活三/四三/双冲四/活四/五连成型点）。
+   * 双活三（rank2）虽由搜索权衡而非决策层直出，但它是真正的先手压制——
+   * 对方被迫应我活三，无自由手去走预埋杀。用于预防层守卫：
+   * 我方有成型攻击先手时，先手节奏快于"预埋两步杀"，预防层不得抢先顶掉进攻。
+   * 注意：对方若有一步杀/活四/四三（force rank>=3），威胁决策层已先于本处拦截，
+   * 必防优先级不受影响；对方 VCF 连续冲四链也在本处之前处理（oppVcf 块）。
+   */
+  function hasWinningInitiative(board, me, forbidEnabled) {
+    var meBlackForbid = forbidEnabled && me === BLACK;
+    var near = collectNear(board);
+    for (var i = 0; i < near.length; i++) {
+      var x = near[i][0], y = near[i][1];
+      if (meBlackForbid && isForbidMove(board, x, y)) continue; // 黑禁手点不构成先手
+      var tl = threatLevel(classifyPoint(board, x, y, me), meBlackForbid);
+      if (tl.force && tl.forceRank >= 2) return true;
+    }
+    return false;
+  }
+
+  /**
+   * 【2026-08-18 破平守卫】对方是否存在"即时威胁成型点"（force rank>=3）：
+   * 一步成五点（win）、活四成型、四三、双冲四。存在时防守优先级必须压过
+   * 任何进攻破平——根节点进攻活性破平前必须先查本函数（顺序不能反）。
+   */
+  function hasImmediateOppThreat(board, me, forbidEnabled) {
+    var you = opp(me);
+    var youBlackForbid = forbidEnabled && you === BLACK;
+    var near = collectNear(board);
+    for (var i = 0; i < near.length; i++) {
+      var x = near[i][0], y = near[i][1];
+      var ol = threatLevel(classifyPoint(board, x, y, you), youBlackForbid);
+      if (ol.force && ol.forceRank >= 3) return true;
+    }
+    return false;
+  }
+
+  /**
+   * 【2026-08-18 根节点进攻活性破平】搜索分数几乎相等（启发分差在 epsilon 内）的
+   * 候选里，优先选"落子后提升己方威胁等级"的点（活三/冲四/活四/双活二等攻击形态）。
+   * 前提守卫：调用方必须先确认 hasImmediateOppThreat===false（对方无即时威胁），
+   * 且不改变一步成五（myWin 由威胁决策层直接返回，搜索也以 WIN 级截断）。
+   * 保守实现：只在前几名启发接近的候选中挑选，且攻击活性以威胁计数线性累加。
+   */
+  function pickActiveTieBreak(board, me, cands, bestMove, forbidEnabled) {
+    var EPS = 300000; // 启发分差在此范围内视为"接近最优"
+    var refS = bestMove ? bestMove.s : cands[0].s;
+    var meBlackForbid = forbidEnabled && me === BLACK;
+    var best = bestMove || cands[0], bestAtk = -Infinity;
+    for (var i = 0; i < cands.length; i++) {
+      var c = cands[i];
+      var ds = c.s - refS;
+      if (ds > EPS) continue;  // 启发显著高于搜索最优（罕见），保守跳过
+      if (-ds > EPS) break;    // cands 按 s 降序，再往后更差
+      var ml = classifyPoint(board, c.x, c.y, me);
+      var tl = threatLevel(ml, meBlackForbid);
+      var atk = 0;
+      if (tl.win) atk += 2000000;
+      if (tl.force) atk += 1000000;
+      atk += ml.live4 * 600000 + ml.rush4 * 300000 + ml.live3 * 150000 + ml.live2 * 30000;
+      if (atk > bestAtk) { bestAtk = atk; best = c; }
+    }
+    return best;
+  }
+
+  /**
    * 威胁决策层（搜索前调用）：只处理确定性的 必胜 / 必防（force 级）。
    * 细分五连与必胜组合：对方五连 > 对方必胜组合，避免"堵活四却不堵五连"的低级失误。
    * 活三/冲四等"强威胁"交给搜索权衡攻防，避免贪心决策架空搜索。
@@ -1055,7 +1132,7 @@
     var meBlackForbid = forbidEnabled && me === BLACK;
     var youBlackForbid = forbidEnabled && you === BLACK;
     var myWin = null, myForce = null, myForceRank = 0;
-    var opWin = null, opForce = null, opForceRank = 0;
+    var opWinPts = [], opForce = null, opForceRank = 0;
     var opForcePts = [];
     // 我方落点：用 me 视角候选（cands 由调用方按 me 的启发分排序）
     for (var i = 0; i < cands.length; i++) {
@@ -1074,22 +1151,30 @@
     for (var j = 0; j < youCands.length; j++) {
       var c2 = youCands[j];
       var ol = threatLevel(classifyPoint(board, c2.x, c2.y, you), youBlackForbid);
-      if (ol.win && !opWin) opWin = c2;
+      if (ol.win) {
+        // 收集对方全部成五点：单点=对方冲四单口；多点=对方活四双口/双冲四真双杀。
+        // 若我（黑）落该点本身是禁手则无法堵，跳过。
+        if (meBlackForbid && isForbidMove(board, c2.x, c2.y)) continue;
+        opWinPts.push(c2);
+        continue;
+      }
       // 同上：对方双活三成型（rank2）不视为必防，先手链可压制（棋谱16 黑 F9 线）
-      else if (ol.force && ol.forceRank >= 3) {
+      if (ol.force && ol.forceRank >= 3) {
         if (!opForce || ol.forceRank > opForceRank) { opForce = c2; opForceRank = ol.forceRank; }
         opForcePts.push({ x: c2.x, y: c2.y, rank: ol.forceRank });
       }
     }
-    // 优先级：我五连 > 我活四/四三（先手杀）> 对方五连 > 对方必胜组合。
-    // 【2026-08-16 关键修复】myForce（我方活四/四三/双冲四，落子后"我下一步必胜"）必须
-    // 优先于 opWin（对方落子即五连）——此前顺序 myWin > opWin > myForce 导致白方第32手
-    // 有自己的活四 J8 却去防黑方 M7 五连点（dec=op-win M7），放弃必胜活四被反杀。
-    // 落活四后对方必须先堵我活四（否则我下步五连），根本没机会落它的五连点=先手压制。
-    // myWin（我落子立即五连）仍最优先——那是"我这一步就赢"，比"活四后还需一步"更直接。
+    // 优先级：我五连 > 对方成五点（必防，不许送杀）> 我方活四/四三（先手杀）> 对方必胜组合。
+    // 【2026-08-18 不许送杀修复】opWin（对方落子即五连）必须优先于 myForce（我方活四/四三）：
+    //  - 单个成五点（对方冲四单口）：必须堵——此时若去走自己的活四，对方下一手直接五连
+    //    获胜，而我方活四需两步才成五，速度慢于对方一步成五 → 送杀。
+    //  - 多个成五点（活四双口/双冲四真双杀）：一手堵不完=已败势，堵与不堵都输；
+    //    退回 myForce 抢攻兜底（2026-08-16"白 J8 活四放弃防守被反杀"的教训：必败局
+    //    别再白送防守，宁可保持进攻）。
+    // myWin（我落子立即五连）仍最优先——那是"我这一步就赢"。
     if (myWin) return { move: myWin, kind: 'my-win' };
+    if (opWinPts.length === 1) return { move: opWinPts[0], kind: 'op-win' };
     if (myForce) return { move: myForce, kind: 'my-force' };
-    if (opWin) return { move: opWin, kind: 'op-win' };
     if (opForce) {
       // 【2026-08-16】多成型点裁决：对方 ≥2 个 force 成型点（双四三/四三+活四等）时，
       // 先搜"一个点废全部"的万能防守点（棋谱23：黑 L7/M9 双四三，白 18 仅 J9 能活）；
@@ -1407,7 +1492,11 @@
       // 预防性防守（高段位）：对方落某个候选点后将获得 VCF 必胜链 →
       // 我方抢先占据该源头点（如 M9/K11 双线交叉、K11 斜线成型位）
       // 仅在中盘以后启用（<10 子时无必胜结构，预防层会误判拖累早期棋力）
-      if (cfg.threat >= 3 && Date.now() < dl && moveCount >= 10) {
+      // 【2026-08-18 进攻优先守卫】我方有成型攻击先手（force>=2：双活三/四三/活四）
+      // 时跳过预防层——先手压制比预埋防守更快，预防层抢先会把必胜节奏顶成被动防守
+      // （例：白双活三 H8 被 prevent J12 顶掉；跳过预防后搜索直接取 H8 必胜）。
+      var myInitiative = hasWinningInitiative(board, player, forbidEnabled);
+      if (!myInitiative && cfg.threat >= 3 && Date.now() < dl && moveCount >= 10) {
         var prevDl = Math.min(dl, Date.now() + 350);
         var prev = preventVcfDecide(board, player, cands.slice(0, 16), forbidEnabled, prevDl);
         if (typeof process !== 'undefined' && process.env.GOMOKU_DBG) console.log('[dbg] prevent:', prev && String.fromCharCode(65 + prev.x) + (prev.y + 1));
@@ -1418,7 +1507,9 @@
     // 存在 q：落 q 后形成四三/活四/双冲四（force rank>=3）→ 两步杀。
     // 棋谱17：黑 G12（跳二预埋）→ F11（E10-F11-G12 活三 + F11-G10-H9-I8 冲四 = 四三），
     // 白 24 若走 E9 活三被黑 G12→F11 链 31 手杀；占 F11（成型点）才能顶住。
-    if (cfg.threat >= 3 && Date.now() < dl && moveCount >= 10) {
+    // 【2026-08-18 进攻优先守卫】同预防层：我方有成型攻击先手时让搜索权衡进攻，
+    // 两步预埋防御不抢先（双活三先手赢在两步预埋之前）。
+    if (!myInitiative && cfg.threat >= 3 && Date.now() < dl && moveCount >= 10) {
       var twoDl = Math.min(dl, Date.now() + 250);
       var two = findOpTwoStep(board, player, forbidEnabled, twoDl);
       if (typeof process !== 'undefined' && process.env.GOMOKU_DBG) console.log('[dbg] two-step:', two && String.fromCharCode(65 + two.x) + (two.y + 1));
@@ -1451,6 +1542,15 @@
       }
       if (curBest) { bestMove = curBest; bestScore = curScore; }
       if (moved && bestScore >= SCORE.WIN - 1000) break; // 已发现必胜，不再加深
+    }
+
+    // 【2026-08-18 根节点进攻活性破平】搜索分数几乎相等的候选中，优先选提升己方
+    // 威胁等级的进攻点（活三/冲四/活四/双活二成型）。守卫（顺序不能反）：
+    // ① 对手存在即时威胁（冲四/活四/成五点成型点）时跳过——必防优先，不许送杀；
+    // ② 已发现一步必胜时不再破平（myWin 由决策层返回、搜索也以 WIN 级截断）。
+    if (cfg.threat >= 2 && bestScore < SCORE.WIN - 1000 &&
+        !hasImmediateOppThreat(board, player, forbidEnabled)) {
+      bestMove = pickActiveTieBreak(board, player, cands, bestMove, forbidEnabled);
     }
 
     return maybeNoise(cands, cfg.noise, bestMove);
