@@ -12,3 +12,6 @@ Thumbs.db
 
 # Node
 node_modules/
+
+# 本地旧引擎备份（不进部署）
+_backup_vweak/

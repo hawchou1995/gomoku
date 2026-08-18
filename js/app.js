@@ -644,6 +644,61 @@
     aiTimers = [];
   }
 
+  // ── 异步 AI 思考（2026-08-18）：Web Worker 跑九段长思考，主线程不卡 ──
+  // Worker 不可用（file:// 或加载失败）时自动回退同步调用（同一时间预算）。
+  var aiWorker = null;
+  var aiWorkerSeq = 0;
+  var aiWorkerPending = {};
+  function initAiWorker() {
+    if (aiWorker !== null) return aiWorker !== false;
+    try {
+      if (typeof Worker === 'undefined') { aiWorker = false; return false; }
+      aiWorker = new Worker('js/ai_worker.js');
+      aiWorker.onmessage = function (ev) {
+        var d = ev.data;
+        var cb = aiWorkerPending[d.id];
+        if (cb) { delete aiWorkerPending[d.id]; cb(d.move, d.error); }
+      };
+      aiWorker.onerror = function () { aiWorker = false; };
+      return true;
+    } catch (e) {
+      aiWorker = false;
+      return false;
+    }
+  }
+  /**
+   * 异步求 AI 最佳落子。
+   * think(board, player, level, ms, forbidEnabled, history, cb(move, err))
+   * 优先 Worker；Worker 加载模型较重（3.6MB），首次思考前有准备期，之后每次请求即时。
+   */
+  function think(board, player, level, ms, forbidEnabled, history, cb) {
+    if (initAiWorker()) {
+      var id = ++aiWorkerSeq;
+      aiWorkerPending[id] = cb;
+      try {
+        aiWorker.postMessage({
+          id: id,
+          board: Array.prototype.slice.call(board), // Uint8Array → 普通数组（结构化克隆）
+          player: player,
+          level: level,
+          ms: ms,
+          forbidEnabled: !!forbidEnabled,
+          history: history || []
+        });
+        return;
+      } catch (e) { delete aiWorkerPending[id]; /* fallthrough 到同步 */ }
+    }
+    // 同步兜底
+    var mv;
+    try { mv = AI.getBestMove(board, player, level, Date.now() + ms, forbidEnabled, history); }
+    catch (e) { mv = null; }
+    setTimeout(function () { cb(mv, null); }, 0);
+  }
+  /** Worker 思考时也要防"对局已结束/换局"的过期落子：回调内二次校验。 */
+  function aiTurnValid() {
+    return state.mode === 'ai' && state.aiStarted && !state.game.over;
+  }
+
   function scheduleAI() {
     // 延迟 300ms 起，段位越高延迟略增（心理感）
     var delay = 300 + state.aiLevel * 80;
@@ -653,23 +708,34 @@
       // 防御性：正常流程中玩家落不了子 AI 就不会被调度，防止任何残留定时器乱局）
       if (state.game.over || state.mode !== 'ai' || !state.aiStarted) return;
       // 三手交换开局：AI 执黑第 1 手强制天元
-      var mv;
       if (state.swapEnabled && state.game.moves.length === 0) {
-        mv = { x: 7, y: 7 };
-      } else {
-        // 单一融合引擎：威胁决策层 → VCT → 深度搜索（ego 棋力），
-        // AlphaZero 模型经候选池融合（_useNet 注册）影响选点（自学习）
-        var hist = state.game.moves.map(function (m) {
-          return { x: m.x, y: m.y, player: m.player };
-        });
-        mv = AI.getBestMove(state.game.board, aiColor, state.aiLevel, Date.now() + 2500, state.forbidEnabled, hist);
+        var mv0 = { x: 7, y: 7 };
+        var r0 = state.game.play(mv0.x, mv0.y);
+        if (!r0.ok) return;
+        A.place();
+        state.lastMove = { x: mv0.x, y: mv0.y };
+        animateStone(mv0.x, mv0.y, aiColor, drawBoard);
+        afterLocalMove(r0);
+        return;
       }
-      var r = state.game.play(mv.x, mv.y);
-      if (!r.ok) return;
-      A.place();
-      state.lastMove = { x: mv.x, y: mv.y };
-      animateStone(mv.x, mv.y, aiColor, drawBoard);
-      afterLocalMove(r);
+      // 【2026-08-18 异步长思考】九段 6500ms 走 Worker，主线程不卡；
+      // 思考期间若对局被重开/结束，回调内 aiTurnValid() 拦截过期落子。
+      var movesAtRequest = state.game.moves.length;
+      var hist = state.game.moves.map(function (m) {
+        return { x: m.x, y: m.y, player: m.player };
+      });
+      var budget = (AI.TIME_BUDGETS && AI.TIME_BUDGETS[state.aiLevel - 1]) || 2500;
+      think(state.game.board, aiColor, state.aiLevel, budget, state.forbidEnabled, hist, function (mv) {
+        if (!mv || !aiTurnValid()) return;
+        // 思考期间有人悔棋/重开 → moves 长度变了 → 丢弃过期结果（不重放）
+        if (state.game.moves.length !== movesAtRequest) return;
+        var r = state.game.play(mv.x, mv.y);
+        if (!r.ok) return;
+        A.place();
+        state.lastMove = { x: mv.x, y: mv.y };
+        animateStone(mv.x, mv.y, aiColor, drawBoard);
+        afterLocalMove(r);
+      });
     }, delay);
     aiTimers.push(t);
     if (aiTimers.length > 30) aiTimers.shift();
@@ -1009,16 +1075,32 @@
     var doIt = function () {
       if (state.mode !== 'ai' || state.playerFirst || state.game.over) return;
       if (attempt++ >= 2) return;
-      var mv = state.swapEnabled ? { x: 7, y: 7 } : AI.getBestMove(state.game.board, E.BLACK, state.aiLevel, Date.now() + 2500, state.forbidEnabled);
-      if (!mv) { setTimeout(doIt, 300); return; }
-      var r = state.game.play(mv.x, mv.y);
-      if (!r.ok) { setTimeout(doIt, 300); return; }
-      A.place();
-      state.lastMove = { x: mv.x, y: mv.y };
-      animateStone(mv.x, mv.y, E.BLACK, drawBoard);
-      afterLocalMove(r);
-      startTicker();
-      drawBoard(); refreshUI();
+      if (state.swapEnabled) {
+        var r0 = state.game.play(7, 7);
+        if (r0.ok) {
+          A.place();
+          state.lastMove = { x: 7, y: 7 };
+          animateStone(7, 7, E.BLACK, drawBoard);
+          afterLocalMove(r0);
+          startTicker();
+          drawBoard(); refreshUI();
+        }
+        return;
+      }
+      // 【2026-08-18 异步】AI 先手首步也用 Worker 长思考（九段可深算开局）
+      var budget = (AI.TIME_BUDGETS && AI.TIME_BUDGETS[state.aiLevel - 1]) || 2500;
+      think(state.game.board, E.BLACK, state.aiLevel, budget, state.forbidEnabled, [], function (mv) {
+        if (!mv || state.mode !== 'ai' || state.playerFirst || state.game.over) return;
+        if (!state.aiStarted) return;
+        var r = state.game.play(mv.x, mv.y);
+        if (!r.ok) { setTimeout(doIt, 300); return; }
+        A.place();
+        state.lastMove = { x: mv.x, y: mv.y };
+        animateStone(mv.x, mv.y, E.BLACK, drawBoard);
+        afterLocalMove(r);
+        startTicker();
+        drawBoard(); refreshUI();
+      });
     };
     var t0 = setTimeout(doIt, 400);
     aiTimers.push(t0);

@@ -68,8 +68,8 @@
     return w;
   })();
 
-  /** 时间预算（毫秒）：段位越高思考越久。九段 3.5s 平衡棋力与体验。 */
-  var TIME_BUDGETS = [900, 900, 1100, 1300, 1500, 1800, 2200, 2800, 3500];
+  /** 时间预算（毫秒）：段位越高思考越久。九段 6.5s（Web Worker 异步执行，主线程不卡）。 */
+  var TIME_BUDGETS = [900, 900, 1100, 1300, 1500, 1800, 2200, 2800, 6500];
 
   var LEVELS = [
     { depth: 1, cand: 12, noise: 0.20, threat: 0 },  // 1 段
@@ -80,7 +80,7 @@
     { depth: 4, cand: 22, noise: 0,    threat: 2 },  // 6 段
     { depth: 4, cand: 24, noise: 0,    threat: 3 },  // 7 段
     { depth: 5, cand: 26, noise: 0,    threat: 3 },  // 8 段
-    { depth: 8, cand: 30, noise: 0,    threat: 4 }   // 9 段（2026-08-16 depth 7→8：黑先手 vs 稳健白方从 0%→100% 胜，白 6/7/8 稳定 100%、白 9 67%；9 段耗时实测 ~300ms/手，浏览器可接受）
+    { depth: 14, cand: 36, noise: 0,   threat: 4 }   // 9 段（2026-08-18：depth 8→14，cand 30→36，预算 3.5s→6.5s 走 Worker；历史启发接入后同样预算搜得更深）
   ];
 
   /**
@@ -720,7 +720,7 @@
    * 正例（有效，保留）：棋谱10 白 J5（J6 五连成型逼黑应）后白 D11 可防黑活四 →
    * 先手赢得回防时间，黑无杀。
    */
-  function vcfStartUsable(board, me, atk, forbidEnabled, dl) {
+  function vcfStartUsable(board, me, atk, forbidEnabled, dl, vctDepth) {
     var you = opp(me);
     var near = collectNear(board);
     var meBlackForbid = forbidEnabled && me === BLACK;
@@ -751,7 +751,7 @@
     // （冲四→…→活四/五连成型）——有则必胜，无需防黑杀点：黑全程被钉死
     // （棋谱19 白 22 I6：黑 H6 → 白 J5 冲四 → 黑 J4 → 白 K4 活四 → 白胜，
     // 黑 K8/N7 杀点永远没机会落子）。VCT 失败才走"防住黑 force"的旧验证。
-    if (vctSearch(board, me, 4, forbidEnabled, dl)) {
+    if (vctSearch(board, me, vctDepth || 4, forbidEnabled, dl)) {
       set(board, Y.x, Y.y, EMPTY);
       set(board, atk.x, atk.y, EMPTY);
       return true;
@@ -1178,13 +1178,24 @@
         if (cands[ci].x === kp[ki].x && cands[ci].y === kp[ki].y) { ordered.push(cands[ci]); break; }
       }
     }
+    // 【2026-08-18 历史启发接入】killer 之后按历史表分数降序重排——
+    // 之前 history 参数传了却不用，等于没做历史排序，同预算下搜索深度少 1-2 层。
+    // 历史表记录"曾引发 β 截断"的走法，命中率高 → 排序靠前 → 剪枝更多 → 深度更深。
+    var rest = [];
     for (ci = 0; ci < cands.length; ci++) {
       var dup = false;
       for (ki = 0; ki < ordered.length; ki++) {
         if (ordered[ki].x === cands[ci].x && ordered[ki].y === cands[ci].y) { dup = true; break; }
       }
-      if (!dup) ordered.push(cands[ci]);
+      if (!dup) rest.push(cands[ci]);
     }
+    rest.sort(function (a, b) {
+      var ha = history[a.y * SIZE + a.x] || 0;
+      var hb = history[b.y * SIZE + b.x] || 0;
+      if (ha !== hb) return hb - ha; // 历史分数高者在前（降序）
+      return b.s - a.s;              // 同分按启发分
+    });
+    ordered = ordered.concat(rest);
 
     var best = -Infinity;
     var origAlpha = alpha;
@@ -1205,6 +1216,8 @@
           if (kp.length > 2) kp.shift();
           killers[ply] = kp;
         }
+        // 【2026-08-18 历史启发写入】β 截断说明该走法是"杀棋/好手"，累加历史分
+        history[c.y * SIZE + c.x] = (history[c.y * SIZE + c.x] || 0) + depth * depth;
         break;
       }
     }
@@ -1236,6 +1249,9 @@
   function getBestMove(board, player, level, deadline, forbidEnabled, history) {
     level = Math.max(1, Math.min(9, level | 0));
     var cfg = LEVELS[level - 1];
+    // 【2026-08-18 穷举深度】按段位设定杀棋链搜索深度：九段 VCF/VCT 更深，
+    // "连冲四→收网"的远距离必胜链才能被完整穷举出来（8 层 ≈ 连续 8 次冲四）。
+    var killDepth = level >= 7 ? 8 : (level >= 4 ? 6 : 4);
     // 【2026-08-16 实验】GOMOKU_DEPTH 临时覆盖搜索深度（测"加深搜索"的真实收益，
     // 决定是否永久改 LEVELS 九段配置，以及要不要 Web Worker 化）
     if (typeof process !== 'undefined' && process.env.GOMOKU_DEPTH) {
@@ -1252,10 +1268,37 @@
       return { x: 7, y: 7 };
     }
 
-    // 开局贴边应对（前 2 手，对手没占天元时）
+    // 【2026-08-18 黑先手强开局定式】AI 执黑且开局（已落 ≤5 子）时，
+    // 用已知必胜型开局占优：黑 1 天元（已有）、黑 3/黑 5 下在"天元 + 对称/邻位"的强形点。
+    // 定式表：以天元(7,7)为中心的高潜力开局点（斜连/直连双活二起手）。
+    // 只在 AI 执黑且非禁手规则（禁手开启时双活三无效）下启用，防止自陷禁手。
+    // 位置必须在"开局贴边应对"之前——否则 moveCount≤2 时对称点先命中，定式永远走不到。
     var moveCount = 0, i, j;
     for (i = 0; i < SIZE; i++) for (j = 0; j < SIZE; j++) if (get(board, i, j) !== EMPTY) moveCount++;
-    if (moveCount <= 2 && level >= 3) {
+    // 【2026-08-18 黑开局定式】AI 执黑开局前 3 手用强开局点；黑5起交给搜索。
+    // (2026-08-18 实测回退说明：给黑额外 +2 强制链深度 / 长定式会拖垮时限、反遭白方背谱，
+    //  故仅保留"天元 + 黑3斜位"短定式，黑5起完全交给搜索——基础强化(深度/历史启发)才是胜率主力)
+    if (player === BLACK && !forbidEnabled && moveCount <= 3 && level >= 5) {
+      var blackStones = 0;
+      for (i = 0; i < SIZE; i++) for (j = 0; j < SIZE; j++) if (get(board, i, j) === BLACK) blackStones++;
+      if (blackStones === 0) {
+        if (get(board, 7, 7) === EMPTY) return { x: 7, y: 7 }; // 黑1 天元
+      } else if (blackStones === 1 && get(board, 7, 7) === BLACK) {
+        // 黑3：天元在手 → 斜对角强点（不同行不同列），若被占则就近标准强点
+        var OPEN_BLACK = [[7, 8], [8, 7], [6, 7], [7, 6], [6, 8], [8, 6], [6, 6], [8, 8], [5, 7], [7, 5]];
+        var best = null;
+        for (var ob = 0; ob < OPEN_BLACK.length; ob++) {
+          var ox = OPEN_BLACK[ob][0], oy = OPEN_BLACK[ob][1];
+          if (get(board, ox, oy) !== EMPTY) continue;
+          if (ox !== 7 && oy !== 7) return { x: ox, y: oy }; // 斜位优先
+          if (!best) best = [ox, oy];
+        }
+        if (best) return { x: best[0], y: best[1] };
+      }
+    }
+
+    // 开局贴边应对（前 2 手，对手没占天元时；AI 执黑已被上方定式优先拦截）
+    if (moveCount <= 2 && level >= 3 && !(player === BLACK)) {
       for (i = 0; i < SIZE; i++) {
         for (j = 0; j < SIZE; j++) {
           if (get(board, i, j) === opp(player) && (i !== 7 || j !== 7)) {
@@ -1294,7 +1337,7 @@
           for (var ai2 = 0; ai2 < atkList.length && Date.now() < dl; ai2++) {
             // 先手有效性验证：对手应五连成型点后，我仍能防住其全部 force 威胁才走先手；
             // 虚先手（防不完）退回防守（棋谱13/14 白 N4、棋谱11 白 G6 均为虚先手）。
-            if (vcfStartUsable(board, player, atkList[ai2], forbidEnabled, Math.min(dl, Date.now() + 300))) return atkList[ai2];
+            if (vcfStartUsable(board, player, atkList[ai2], forbidEnabled, Math.min(dl, Date.now() + 300), killDepth)) return atkList[ai2];
           }
         }
         // 多威胁裁决（高段位）：对方存在多个必胜成型点时，
@@ -1330,13 +1373,13 @@
       }
     }
 
-    // VCF 连续冲四搜索（高段位）：多步杀
+    // VCF 连续冲四搜索（高段位）：多步杀（2026-08-18：深度按段位 killDepth，九段 8 层穷举）
     if (cfg.threat >= 2) {
-      var vcfMove = vcfSearch(board, player, 4, forbidEnabled, dl);
+      var vcfMove = vcfSearch(board, player, killDepth, forbidEnabled, dl);
       if (typeof process !== 'undefined' && process.env.GOMOKU_DBG) console.log('[dbg] vcfWhite:', vcfMove && String.fromCharCode(65 + vcfMove.x) + (vcfMove.y + 1));
       if (vcfMove) return vcfMove;
       // 防守：对方存在 VCF → 占据对方杀棋起点
-      var oppVcf = vcfSearch(board, opp(player), 4, forbidEnabled, dl);
+      var oppVcf = vcfSearch(board, opp(player), killDepth, forbidEnabled, dl);
       if (typeof process !== 'undefined' && process.env.GOMOKU_DBG) console.log('[dbg] oppVcf:', oppVcf && String.fromCharCode(65 + oppVcf.x) + (oppVcf.y + 1));
       if (oppVcf) {
         // 起点验证：对方落该起点后是否构成"无解杀"（活四成型/双杀）？
