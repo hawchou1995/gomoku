@@ -856,3 +856,251 @@ a:focus-visible,
   .topbar { padding: 0 12px; }
   .brand-text { font-size: 15px; }
 }
+
+/* ════════════════════════════════════════════════════════════════
+   沉浸式全屏对局（2026-08-21 · 移动游戏 App 观感）
+   点「开始对局」后 body.immersive：
+   - 顶栏隐藏，游戏视图铺满视口（fixed inset:0）
+   - 棋盘在 HUD 上下浮层之间居中，可缩放/捏合
+   - HUD：毛玻璃状态条 + 玩家条 + 底部操作条
+   ════════════════════════════════════════════════════════════════ */
+
+/* 移动端防双击缩放 / 页面回弹（App 感） */
+html, body { touch-action: manipulation; overscroll-behavior: none; }
+
+body.immersive {
+  overflow: hidden;
+  height: 100%;
+}
+
+body.immersive .topbar { display: none; }
+
+body.immersive #view-game {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  background:
+    radial-gradient(120% 90% at 50% 20%, #232936 0%, transparent 60%),
+    radial-gradient(120% 120% at 50% 100%, #1a1f2c 0%, transparent 55%),
+    var(--bg);
+  display: flex;
+}
+
+body.immersive #view-game .game-layout {
+  display: block;
+  flex: 1;
+  max-width: none;
+  margin: 0;
+  height: 100%;
+  min-width: 0;
+}
+
+body.immersive #view-game .board-panel {
+  height: 100%;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+}
+
+body.immersive #view-game .board-scroll {
+  height: 100%;
+  display: flex;
+  overflow: auto;
+  overscroll-behavior: none;
+  padding-top: calc(env(safe-area-inset-top, 0px) + 86px);
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 92px);
+  padding-left: 12px;
+  padding-right: 12px;
+  /* 沉浸态棋盘区：允许单指平移（放大后拖动），禁用页面双击/捏合缩放（由 JS 接管） */
+  touch-action: pan-x pan-y;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+body.immersive #view-game .board-wrap {
+  margin: auto; /* flex 居中：小时居中，放大溢出时可滚动（margin:auto 免疫居中裁剪 bug） */
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 0 42px rgba(212, 168, 83, 0.08);
+}
+
+body.immersive #view-game .game-status,
+body.immersive #view-game .board-zoom,
+body.immersive #view-game .side-panel { display: none !important; }
+
+/* ── 沉浸 HUD ─────────────────────────── */
+.hud {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;            /* 容器不拦截点击，仅按钮/状态胶囊可交互 */
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: calc(env(safe-area-inset-top, 0px) + 12px) 14px calc(env(safe-area-inset-bottom, 0px) + 12px);
+}
+/* 仅可交互元素拦截点击；hud-top/hud-players/hud-bottom 整行点击穿透，
+   否则横贯全屏的 flex 行会盖住棋盘中央的落子点 */
+.hud button, .hud .hud-status { pointer-events: auto; }
+
+/* 顶部：离开 / 状态胶囊 / 菜单 */
+.hud-top { display: flex; align-items: center; gap: 10px; }
+
+.hud-status {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--text);
+  background: rgba(15, 17, 21, 0.74);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 9px 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
+}
+.hud-status.turn-me { color: var(--accent); }
+.hud-status.thinking { color: var(--text-dim); animation: hud-pulse 1.5s ease-in-out infinite; }
+.hud-status.over-win { color: var(--accent); }
+.hud-status.over-lose { color: var(--danger); }
+
+@keyframes hud-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.hud-icon-btn {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  background: rgba(15, 17, 21, 0.74);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
+  transition: transform 0.06s, background 0.15s;
+}
+.hud-icon-btn:hover { background: rgba(29, 33, 43, 0.85); }
+.hud-icon-btn:active { transform: scale(0.92); }
+
+/* 玩家条：黑 VS 白 */
+.hud-players {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.hud-player {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 42vw;
+  background: rgba(15, 17, 21, 0.74);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 12px 6px 8px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
+  transition: border-color 0.15s, background-color 0.15s, transform 0.1s;
+}
+.hud-player.active {
+  border-color: var(--accent);
+  background: rgba(212, 168, 83, 0.14);
+  transform: translateY(-1px);
+}
+.hud-player .stone { width: 16px; height: 16px; }
+.hud-p-name {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 22vw;
+}
+.hud-p-clock {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+.hud-vs {
+  color: var(--text-dim);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  flex-shrink: 0;
+}
+
+/* 底部操作条 */
+.hud-bottom {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+.hud-action {
+  flex: 1;
+  max-width: 150px;
+  padding: 12px 0;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: rgba(15, 17, 21, 0.78);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
+  transition: transform 0.06s, border-color 0.15s;
+}
+.hud-action:hover:not(:disabled) { border-color: var(--accent); }
+.hud-action:active:not(:disabled) { transform: scale(0.95); }
+.hud-action:disabled { opacity: 0.32; }
+.hud-action.danger { color: var(--danger); }
+.hud-action.danger:hover:not(:disabled) { border-color: var(--danger); }
+
+/* 竖屏极窄设备：玩家条上下并排，压缩顶部占位 */
+@media (max-width: 480px) {
+  body.immersive #view-game .board-scroll {
+    padding-top: calc(env(safe-area-inset-top, 0px) + 78px);
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 82px);
+  }
+  .hud { padding-left: 10px; padding-right: 10px; }
+  .hud-player { padding: 5px 10px 5px 7px; }
+  .hud-p-clock { display: none; } /* 窄屏隐藏计时，只留名字，避免拥挤 */
+}
+
+/* 横屏（手机/平板横拿）：顶部占位压缩，底部操作条横向排开 */
+@media (orientation: landscape) and (max-height: 520px) {
+  body.immersive #view-game .board-scroll {
+    padding-top: calc(env(safe-area-inset-top, 0px) + 62px);
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 66px);
+  }
+  .hud-top { gap: 8px; }
+  .hud-players { display: none; } /* 横屏窄高：省掉玩家条，名字进状态条 */
+  .hud-status { font-size: 13px; padding: 7px 12px; }
+  .hud-icon-btn { width: 34px; height: 34px; }
+  .hud-action { padding: 9px 0; font-size: 13px; max-width: 130px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hud-status.thinking { animation: none; }
+}
+

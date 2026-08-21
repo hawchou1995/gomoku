@@ -212,6 +212,39 @@
       <div id="history-list" class="history-list"></div>
     </main>
 
+    <!-- ═══ 沉浸式 HUD（开局后全屏覆盖，移动游戏 App 观感）═══
+         body.immersive 时显示：顶部状态条 + 玩家条 + 底部操作条，
+         毛玻璃浮层，不遮挡棋盘操作。 -->
+    <div id="hud" class="hud hidden" role="application" aria-label="对局控制">
+      <div class="hud-top">
+        <button class="hud-icon-btn" id="btn-hud-leave" title="离开对局" aria-label="离开对局">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <div class="hud-status" id="hud-status">准备中…</div>
+        <button class="hud-icon-btn" id="btn-hud-menu" title="菜单" aria-label="对局菜单">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
+        </button>
+      </div>
+      <div class="hud-players">
+        <div class="hud-player" id="hud-p-black">
+          <span class="stone black" aria-hidden="true"></span>
+          <span class="hud-p-name" id="hud-p-black-name">黑方</span>
+          <span class="hud-p-clock" id="hud-p-black-clock">00:00</span>
+        </div>
+        <span class="hud-vs" aria-hidden="true">VS</span>
+        <div class="hud-player" id="hud-p-white">
+          <span class="stone white" aria-hidden="true"></span>
+          <span class="hud-p-name" id="hud-p-white-name">白方</span>
+          <span class="hud-p-clock" id="hud-p-white-clock">00:00</span>
+        </div>
+      </div>
+      <div class="hud-bottom">
+        <button class="hud-action" id="btn-hud-undo" disabled>悔棋</button>
+        <button class="hud-action" id="btn-hud-resign" disabled>认输</button>
+        <button class="hud-action danger" id="btn-hud-restart" disabled>重开</button>
+      </div>
+    </div>
+
     <!-- ═══ 弹窗：房间 / 结果 ═══ -->
     <div id="modal-root" class="modal-root hidden">
       <div class="modal-backdrop" id="modal-backdrop"></div>
