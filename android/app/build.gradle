@@ -1,0 +1,49 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.hawchou.gomoku'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.hawchou.gomoku"
+        minSdk 26
+        targetSdk 34
+        versionCode 1
+        versionName "1.0.0"
+    }
+
+    // release 签名：keystore 在 D:/AndroidDev（不入库），密码从环境变量读取，仓库代码不含明文密码
+    signingConfigs {
+        release {
+            storeFile file(System.getenv('GOMOKU_STORE_FILE') ?: 'D:/AndroidDev/gomoku-release.keystore')
+            storePassword System.getenv('GOMOKU_STORE_PASS')
+            keyAlias 'gomoku'
+            keyPassword System.getenv('GOMOKU_KEY_PASS')
+            // v1(JAR) + v2 + v3 全开：兼容 jarsigner 校验与 Android 7.0+ 校验路径
+            enableV1Signing true
+            enableV2Signing true
+            enableV3Signing true
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            shrinkResources false
+            signingConfig signingConfigs.release
+        }
+    }
+
+    compileOptions {
+        // Java 8 语言级别：MainActivity 仅用基础 API，无需 JDK 模块镜像/脱糖
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    buildFeatures {
+        // MainActivity 用 BuildConfig.DEBUG 控制 WebView 调试开关
+        buildConfig true
+    }
+}
