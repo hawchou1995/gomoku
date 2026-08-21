@@ -1140,15 +1140,22 @@
     var youBlackForbid = forbidEnabled && you === BLACK;
     var meBlackForbid = forbidEnabled && me === BLACK;
     var near = collectNear(board);
-    // ① 我方先手检查：存在空点 p，我落 p 即成五/活四/冲四（活三已在盘或一步成型）
-    //    → 我方先手更快，保持进攻，守卫不触发。
+    // ① 我方真实先手检查：存在空点 p，我落 p 即成五/活四/四三/双冲四/双活三
+    //    （force rank>=2）→ 我方先手更快，守卫不触发。
+    //    【2026-08-21 修复】裸冲四（rank strong）不再直接算"先手"——死冲四（如棋谱
+    //    08-21 step45 黑 D8/K13）落子后对方一堵即死，先手节奏并不快于对方活三/活四
+    //    成型；曾因此放行防守、白活四成型收网。裸冲四须经 vcfSearch 核验成链
+    //    （连续冲四必胜链）才算真先手——成链则对方全程被迫应冲四，无自由手走活三。
+    var realInit = false;
     for (var i = 0; i < near.length; i++) {
       var x = near[i][0], y = near[i][1];
       if (get(board, x, y) !== EMPTY) continue;
       if (meBlackForbid && isForbidMove(board, x, y)) continue;
-      var mc = classifyPoint(board, x, y, me);
-      if (mc.win > 0 || mc.live4 > 0 || mc.rush4 > 0) return null;
+      var mtl = threatLevel(classifyPoint(board, x, y, me), meBlackForbid);
+      if (mtl.force && mtl.forceRank >= 2) { realInit = true; break; }
     }
+    if (!realInit && vcfSearch(board, me, 6, forbidEnabled, Date.now() + 150)) realInit = true;
+    if (realInit) return null;
     // ② 对方威胁检查：收集对方活三两端堵点 + 更强威胁（成五点/活四在盘）堵点。
     //    - 成五点：对方落 p 即五连（冲四单口/活四双口）——比活三更急，必须堵
     //    - 活四成型端：对方落 p 即活四（oc.live4 > 0）
@@ -1251,6 +1258,12 @@
     var myWin = null, myForce = null, myForceRank = 0;
     var opWinPts = [], opForce = null, opForceRank = 0;
     var opForcePts = [];
+    // 【2026-08-21 双活三成型点】对方落某点即形成双活三（两个活三并存=无解威胁，
+    // 我方一手只能堵一个活三，对方另一活三必成活四收网）——除我方有更快先手外必须占住。
+    // 注意与"双活三在盘（棋谱16 白 H11 被黑 F9 链晾死）"的区别：在盘的双活三由
+    // VCF/搜索权衡（可被先手链压制）；"一步双活三成型点"是对方下回合即成型的
+    // 无解威胁，我方当前手必须拦截（占成型点或 VCF 抢攻）。
+    var opD3 = null, opD3Rank = 0, opD3Pts = [];
     // 我方落点：用 me 视角候选（cands 由调用方按 me 的启发分排序）
     for (var i = 0; i < cands.length; i++) {
       var c = cands[i];
@@ -1280,6 +1293,12 @@
         if (!opForce || ol.forceRank > opForceRank) { opForce = c2; opForceRank = ol.forceRank; }
         opForcePts.push({ x: c2.x, y: c2.y, rank: ol.forceRank });
       }
+      // 【2026-08-21 双活三成型点（rank2）】对方落此点即双活三=无解威胁，收集为必防
+      // 候选（排在 rank>=3 之后）。我方若有更快先手（myForce/VCF）由上层优先级先拦截。
+      else if (ol.force && ol.forceRank === 2) {
+        if (!opD3 || ol.forceRank > opD3Rank) { opD3 = c2; opD3Rank = ol.forceRank; }
+        opD3Pts.push({ x: c2.x, y: c2.y, rank: ol.forceRank });
+      }
     }
     // 优先级：我五连 > 对方成五点（必防，不许送杀）> 我方活四/四三（先手杀）> 对方必胜组合。
     // 【2026-08-18 不许送杀修复】opWin（对方落子即五连）必须优先于 myForce（我方活四/四三）：
@@ -1301,6 +1320,17 @@
         if (multi) return { move: multi, kind: 'op-force-multi' };
       }
       return { move: opForce, kind: 'op-force' };
+    }
+    // 【2026-08-21 双活三成型点】无 rank>=3 必防点但对方存在一步双活三成型点——
+    // 直接占住成型点（一步废对方两个活三）；多个成型点先搜万能点（占一废多）。
+    // 竞速：我方有 VCF 必胜链时由 getBestMove 的 findVcfStarts 分支（op-d3 已纳入）
+    // 抢攻，不走到这里。
+    if (opD3) {
+      if (opD3Pts.length >= 2) {
+        var multiD3 = findMultiForceDefense(board, me, opD3Pts, forbidEnabled, Date.now() + 250);
+        if (multiD3) return { move: multiD3, kind: 'op-d3-multi' };
+      }
+      return { move: opD3, kind: 'op-d3' };
     }
     return null;
   }
@@ -1545,7 +1575,9 @@
         // 盲目防守（如白 G9）反而给对手留出占我方进攻点的机会。
         // 【2026-08-16 多候选】findVcfStarts 返回全部命中点逐个验证——首个命中
         // （如棋谱19 I8）验证失败不代表后续候选（I6，VCT 必胜链）也不行（曾只试第一个）。
-        if (cfg.threat >= 3 && dec.kind === 'op-force' && Date.now() < dl) {
+        // 【2026-08-21】op-d3（对方一步双活三成型点）同样纳入：我方 VCF 必胜链
+        // 先手节奏快于对方双活三（对方双活三 → 活四 → 五连需 3 手，我方冲四链全程钉死对方）。
+        if (cfg.threat >= 3 && (dec.kind === 'op-force' || dec.kind === 'op-d3') && Date.now() < dl) {
           var atkList = findVcfStarts(board, player, cands, forbidEnabled, Math.min(dl, Date.now() + 150));
           for (var ai2 = 0; ai2 < atkList.length && Date.now() < dl; ai2++) {
             // 先手有效性验证：对手应五连成型点后，我仍能防住其全部 force 威胁才走先手；
