@@ -1094,6 +1094,123 @@
   }
 
   /**
+   * 连续活三的另一端：p=(x,y) 是对方活四成型点（对方落 p 成连续四连活四）。
+   * 返回该连续活三的远端点（另一端堵点）；若 p 不是连续四连端点则返回 null。
+   * 例：横活三 (3,7)(4,7)(5,7)，p=(2,7) → 另一端 (6,7)。
+   */
+  function live3FarEnd(board, x, y, you) {
+    set(board, x, y, you);
+    var found = null;
+    for (var d = 0; d < 4 && !found; d++) {
+      var dx = DIRS[d][0], dy = DIRS[d][1];
+      var cntR = 0, cntL = 0;
+      var nx = x + dx, ny = y + dy;
+      while (inB(nx, ny) && get(board, nx, ny) === you) { cntR++; nx += dx; ny += dy; }
+      var openR = inB(nx, ny) && get(board, nx, ny) === EMPTY;
+      nx = x - dx; ny = y - dy;
+      while (inB(nx, ny) && get(board, nx, ny) === you) { cntL++; nx -= dx; ny -= dy; }
+      var openL = inB(nx, ny) && get(board, nx, ny) === EMPTY;
+      // 连续四连活四：cntR+cntL+1 === 4 且两端开放；p 在端点（cntR===3 或 cntL===3）
+      if (cntR + cntL + 1 === 4 && openR && openL) {
+        if (cntR === 3) found = { x: x + 4 * dx, y: y + 4 * dy };
+        else if (cntL === 3) found = { x: x - 4 * dx, y: y - 4 * dy };
+      }
+    }
+    set(board, x, y, EMPTY);
+    return found;
+  }
+
+  /**
+   * 【2026-08-21 威胁竞速守卫】对方存在单活三（或更强）威胁，且我方没有
+   * 活三+（活三已在盘/一步活四/一步冲四/一步成五）先手时，必须强制堵活三——
+   * 不进入搜索/破平。
+   * 竞速规则：我方有活三+先手（活三已在盘 → 一步活四 → 五连）时，先手节奏
+   * 快于对方活三（对方活三 → 活四 → 五连），保持进攻；否则对方先到，必须堵。
+   * 注意：能"一步成活三"不算活三+先手——那需要 3 手才成五，慢于对方已成形
+   * 活三的 2 手杀（棋谱 2026-08-21：黑 21 本可落 (6,7) 一步成己方活三，但
+   * 白 22 活四 → 白 24 五连，进攻节奏输给防守）。
+   * 堵点选择：对方活三两端都收集（活四成型端 + 连续活三远端点），优先
+   * "堵的同时提升己方威胁"的点（成五/活四/冲四/活三 > 活二 > 眠三）；
+   * 对方多活三时按多成型点裁决（堵点同时废多个活三者优先）。
+   * 禁手兼容：黑棋堵点若为禁手（双活三/双冲四）则跳过，选另一堵点。
+   * 返回堵点 {x,y} 或 null（无需强制防守）。
+   */
+  function threatRaceGuard(board, me, forbidEnabled) {
+    var you = opp(me);
+    var youBlackForbid = forbidEnabled && you === BLACK;
+    var meBlackForbid = forbidEnabled && me === BLACK;
+    var near = collectNear(board);
+    // ① 我方先手检查：存在空点 p，我落 p 即成五/活四/冲四（活三已在盘或一步成型）
+    //    → 我方先手更快，保持进攻，守卫不触发。
+    for (var i = 0; i < near.length; i++) {
+      var x = near[i][0], y = near[i][1];
+      if (get(board, x, y) !== EMPTY) continue;
+      if (meBlackForbid && isForbidMove(board, x, y)) continue;
+      var mc = classifyPoint(board, x, y, me);
+      if (mc.win > 0 || mc.live4 > 0 || mc.rush4 > 0) return null;
+    }
+    // ② 对方威胁检查：收集对方活三两端堵点 + 更强威胁（成五点/活四在盘）堵点。
+    //    - 成五点：对方落 p 即五连（冲四单口/活四双口）——比活三更急，必须堵
+    //    - 活四成型端：对方落 p 即活四（oc.live4 > 0）
+    //    - 连续活三远端点：对每个活四成型端 p，找其所在连续活三的另一端
+    var blockPts = [];
+    var seen = {};
+    function addBlock(bx, by, live4, win) {
+      var k = bx + ',' + by;
+      if (seen[k]) return;
+      seen[k] = 1;
+      blockPts.push({ x: bx, y: by, live4: live4, win: !!win });
+    }
+    for (var j = 0; j < near.length; j++) {
+      var bx = near[j][0], by = near[j][1];
+      if (get(board, bx, by) !== EMPTY) continue;
+      if (youBlackForbid && isForbidMove(board, bx, by)) continue;
+      var oc = classifyPoint(board, bx, by, you);
+      if (oc.win > 0) {
+        // 对方落此点即五连：活四双口/冲四单口/成五点。单口由 threatDecide op-win
+        // 已拦截（守卫不运行）；此处覆盖"双口活四=必败局但无抢攻点"的确定性防守，
+        // 避免搜索在必堵场景下选点不稳定（2026-08-21 实测同局面有时 (6,7) 有时 (2,6)）。
+        addBlock(bx, by, 0, true);
+        continue;
+      }
+      if (oc.live4 > 0) {
+        // 【2026-08-21 修复·跳三不触发守卫】只有"连续活三"的活四成型端才强制堵：
+        // live3FarEnd 返回非 null 说明该点是连续活三的端点（真活三——堵一头仍可从
+        // 另一头活四，必须强制防）。跳三（X.X.X 隔空）补 gap 也成连续活四
+        // （oc.live4>0），但 live3FarEnd 返回 null——跳三只有一个补 gap 点、对手堵
+        // gap 即废，威胁远弱于连续活三（evaluateBoard 2026-08-16 跳三降级同哲学），
+        // 交给搜索权衡，守卫不强制堵。实测旧白爱撒跳形，黑 62% 手数在堵跳三。
+        var other = live3FarEnd(board, bx, by, you);
+        if (other) {
+          addBlock(bx, by, oc.live4);
+          addBlock(other.x, other.y, 0);
+        }
+      }
+    }
+    if (blockPts.length === 0) return null; // 对方无活三/成五点威胁
+    // ③ 选堵点：优先"堵的同时提升己方威胁"；多活三堵点（对方落此点成多个活四）优先；
+    //    成五点（对方下一步即五连）绝对优先于活三堵点。
+    var best = null, bestScore = -Infinity;
+    for (var k = 0; k < blockPts.length; k++) {
+      var p = blockPts[k];
+      if (meBlackForbid && isForbidMove(board, p.x, p.y)) continue; // 禁手堵点不可落
+      var mc2 = classifyPoint(board, p.x, p.y, me);
+      var s = 0;
+      if (p.win) s += 2000000; // 对方落此点即五连：比活三堵点更急（活四双口/冲四单口）
+      if (mc2.win > 0) s += 1000000;
+      else if (mc2.live4 > 0) s += 500000;
+      else if (mc2.rush4 > 0) s += 200000;
+      else if (mc2.live3 > 0) s += 100000;
+      else if (mc2.live2 > 0) s += 10000;
+      else if (mc2.sleep3 > 0) s += 5000;
+      s += p.live4 * 50000; // 堵点同时废多个活三（对方落此点成多个活四）优先
+      s += POS_WEIGHT[p.y * SIZE + p.x] * 10;
+      if (s > bestScore) { bestScore = s; best = p; }
+    }
+    return best || blockPts[0];
+  }
+
+  /**
    * 【2026-08-18 根节点进攻活性破平】搜索分数几乎相等（启发分差在 epsilon 内）的
    * 候选里，优先选"落子后提升己方威胁等级"的点（活三/冲四/活四/双活二等攻击形态）。
    * 前提守卫：调用方必须先确认 hasImmediateOppThreat===false（对方无即时威胁），
@@ -1409,6 +1526,17 @@
     if (cfg.threat > 0) {
       var dec = threatDecide(board, player, cands, forbidEnabled);
       if (typeof process !== 'undefined' && process.env.GOMOKU_DBG) console.log('[dbg] dec:', dec && dec.kind, dec && String.fromCharCode(65 + dec.move.x) + (dec.move.y + 1));
+      // 【2026-08-21 威胁竞速守卫】对方活三在盘且我方无活三+先手 → 确定性堵活三，
+      // 不进入搜索/破平（棋谱 2026-08-21：黑 21 漏防白 20 单活三，白 22 活四 →
+      // 白 24 五连）。运行条件：dec 为 null（无 force 级决策），或 dec 为 op-force
+      // 且是"活四成型点"（对方落该点即活四，rank4——活三的活四端，守卫可覆盖）。
+      // op-win/my-win/my-force 更紧急、四三/双冲四（rank3）是复合威胁，均不覆盖。
+      var raceRun = !dec || (dec.kind === 'op-force' && classifyPoint(board, dec.move.x, dec.move.y, opp(player)).live4 > 0);
+      if (raceRun) {
+        var race = threatRaceGuard(board, player, forbidEnabled);
+        if (typeof process !== 'undefined' && process.env.GOMOKU_DBG) console.log('[dbg] race:', race && String.fromCharCode(65 + race.x) + (race.y + 1));
+        if (race) return race;
+      }
       if (dec) {
         var decMove = dec.move;
         // 进攻优先（高段位）：对方存在活四/双杀成型点（op-force）时，
@@ -1565,6 +1693,7 @@
     _threat: threatLevel,
     _forbid: isForbidMove,
     _evaluate: evaluateBoard,
+    _raceGuard: threatRaceGuard,
     _useNet: setNet,
     _netReady: netReady
   };
