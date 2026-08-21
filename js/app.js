@@ -438,6 +438,7 @@
     var g = state.game;
     if (g.over) {
       if (g.over.winner === 0) txt = '平局';
+      else if (g.over.reason === 'forbid') txt = '黑方禁手判负'; // 【GOKUP-003】区分禁手原因
       else {
         var w = g.over.winner === E.BLACK ? '黑方' : '白方';
         txt = w + ' 获胜';
@@ -506,6 +507,7 @@
     return {
       mode: state.mode,
       level: state.mode === 'ai' ? state.aiLevel : null,
+      forbidEnabled: !!state.forbidEnabled, // 禁手状态（复盘/训练必须可追溯）
       players: {
         black: seatName('black'),
         white: state.mode === 'ai' ? seatName('white') : seatName('white')
@@ -605,7 +607,12 @@
       }
       var r = g.play(x, y);
       if (!r.ok) {
-        if (r.reason === 'forbid') { toast('禁手：' + r.forbid + '，不可落子'); return; }
+        if (r.reason === 'forbid') {
+          // 【GOKUP-003 / RIF】黑棋落禁手点即判负（白胜），对局立即结束，不再"重走"。
+          // 禁手只可能发生在黑方回合（engine.checkForbid 仅判黑），此处按落子方防御判断。
+          if (g.turn === E.BLACK) finishByForbid(r.forbid);
+          else toast('禁手：' + r.forbid + '，不可落子');
+        }
         return;
       }
       A.place();
@@ -796,7 +803,11 @@
         // 思考期间有人悔棋/重开 → moves 长度变了 → 丢弃过期结果（不重放）
         if (state.game.moves.length !== movesAtRequest) return;
         var r = state.game.play(mv.x, mv.y);
-        if (!r.ok) return;
+        if (!r.ok) {
+          // 【GOKUP-003】AI 执黑若返回禁手点（防御性，正常 AI 内置避禁）→ 黑负白胜终局
+          if (r.reason === 'forbid') finishByForbid(r.forbid);
+          return;
+        }
         A.place();
         state.lastMove = { x: mv.x, y: mv.y };
         animateStone(mv.x, mv.y, aiColor, drawBoard);
@@ -824,7 +835,11 @@
           var seatOfTurn = g.turn === E.BLACK ? 'black' : 'white';
           if (fromSeat !== state.mySeat && seatOfTurn !== fromSeat) return; // 非本方回合，丢弃
           var r = g.play(msg.x, msg.y);
-          if (!r.ok) return;
+          if (!r.ok) {
+            // 【GOKUP-003】联机禁手：host 权威——黑方（含远端/本地黑）落禁手点 → 白胜终局并广播
+            if (r.reason === 'forbid') handleNetMessage({ type: 'forbid', forbid: r.forbid }, fromSeat);
+            return;
+          }
           A.place();
           state.lastMove = { x: msg.x, y: msg.y };
           state.net.broadcast('move', { x: msg.x, y: msg.y, seq: g.seq, timers: state.timers });
@@ -963,6 +978,24 @@
         return;
       }
 
+      case 'forbid': {
+        // 【GOKUP-003 / RIF】禁手终局：黑方落禁手点 → 黑负、白胜。
+        // host 权威落库并广播，双端/观战者收到同一消息渲染一致终局。
+        if (g.over) return;
+        var forbidTxt = msg.forbid || '';
+        g.over = { winner: E.WHITE, line: null, reason: 'forbid', forbid: forbidTxt };
+        var iFWin = state.mySeat === 'white';
+        if (iFWin) A.win(); else A.lose();
+        showGameOver(g.over, iFWin, 'remote');
+        drawBoard();
+        if (state.isHost) {
+          saveHistory(g.over, 'remote');
+          state.net.broadcast('forbid', { forbid: forbidTxt });
+        }
+        refreshUI();
+        return;
+      }
+
       case 'restart-req': {
         if (fromSeat === state.mySeat) return;
         var close2 = openModal(
@@ -1081,6 +1114,8 @@
     // 对局进行中禁止重开（按钮已禁用，双保险）
     if (state.aiStarted && !state.game.over) return;
     state.aiStarted = true;
+    // 【GOKUP-003】开局时同步禁手开关到引擎（首局 moves=0 不重置 startNewGame，需显式同步）
+    state.game.forbidEnabled = state.forbidEnabled;
     if (state.game.moves.length > 0) startNewGame(true); // 上一局残局清盘
     state.mySeat = state.playerFirst ? 'black' : 'white';
     renderPlayers(null);
@@ -1124,6 +1159,8 @@
     if (state.mode !== 'pvp') return;
     if (state.aiStarted && !state.game.over) return;
     state.aiStarted = true;
+    // 【GOKUP-003】开局时同步禁手开关到引擎（首局 moves=0 不重置 startNewGame，需显式同步）
+    state.game.forbidEnabled = state.forbidEnabled;
     if (state.game.moves.length > 0) startNewGame(true);
     renderPlayers(null);
     startTicker();
@@ -1164,7 +1201,12 @@
         if (!mv || state.mode !== 'ai' || state.playerFirst || state.game.over) return;
         if (!state.aiStarted) return;
         var r = state.game.play(mv.x, mv.y);
-        if (!r.ok) { setTimeout(doIt, 300); return; }
+        if (!r.ok) {
+          // 【GOKUP-003】AI 先手黑第 1 手理论上不可能禁手，仍防御处理（黑负白胜）
+          if (r.reason === 'forbid') { finishByForbid(r.forbid); return; }
+          setTimeout(doIt, 300);
+          return;
+        }
         A.place();
         state.lastMove = { x: mv.x, y: mv.y };
         animateStone(mv.x, mv.y, E.BLACK, drawBoard);
@@ -1321,6 +1363,12 @@
   function applySnapshot(snap) {
     if (!snap) return;
     state.game.load(snap);
+    // 【GOKUP-003】Game.load 只恢复 winner/line；补回 reason/forbid，
+    // 保证断线重连后禁手判负终局的状态条/导出仍能识别"黑方禁手判负"。
+    if (snap.over && state.game.over) {
+      state.game.over.reason = snap.over.reason;
+      state.game.over.forbid = snap.over.forbid;
+    }
     if (snap.timers) state.timers = snap.timers;
     state.lastMove = snap.moves && snap.moves.length
       ? { x: snap.moves[snap.moves.length - 1].x, y: snap.moves[snap.moves.length - 1].y }
@@ -1451,6 +1499,24 @@
     refreshUI();
   }
 
+  /**
+   * 【GOKUP-003 / RIF】黑棋禁手判负收尾：黑方落禁手点 → 黑负、白胜，对局立即结束。
+   * 复用既有 showGameOver/saveHistory/refreshUI 终局路径，不重复渲染代码。
+   * @param forbid 禁手类型字符串（'三三'/'四四'/'长连' 或组合），必须保留并展示。
+   */
+  function finishByForbid(forbid) {
+    var g = state.game;
+    if (g.over) return;
+    g.over = { winner: E.WHITE, line: null, reason: 'forbid', forbid: forbid || '' };
+    var playerColor = myColor();
+    var iWin = (playerColor === E.WHITE) || (state.mySeat === 'white');
+    if (iWin) A.win(); else A.lose();
+    showGameOver(g.over, iWin);
+    saveHistory(g.over);
+    refreshUI();
+    drawBoard();
+  }
+
   function doRestart() {
     if (state.mode === 'ai') {
       // 【2026-08-16】先关闭任何弹窗（三手交换选择窗等）——弹窗残留会挡住
@@ -1502,6 +1568,7 @@
     var sub;
     if (over.reason === 'resign') sub = '对方认输';
     else if (over.reason === 'timeout') sub = '对方超时未归';
+    else if (over.reason === 'forbid') sub = '黑方禁手（' + (over.forbid || '禁手') + '）判负';
     else sub = '五子连珠';
     return { big: w + ' 胜', sub: sub, win: true, draw: false };
   }
@@ -1966,6 +2033,7 @@
       mode: 'ai',
       level: state.aiLevel,
       engine: 'fusion',
+      forbidEnabled: !!state.forbidEnabled, // 禁手状态（复盘/训练必须可追溯）
       winner: g.over ? (g.over.winner === E.BLACK ? 'black' : g.over.winner === E.WHITE ? 'white' : 'draw') : 'ongoing',
       moves: g.moves.map(function (m) {
         return { x: m.x, y: m.y, player: m.player === E.BLACK ? 'black' : 'white' };

@@ -75,7 +75,44 @@
     state.game = new E.Game();
     state.mode = null;
     $('conn-indicator').classList.add('hidden');
+    setImmersive(false);
     showView('home');
+  }
+
+  // ─────────────────────────── 沉浸式全屏（移动游戏 App 观感）───────────────────────────
+
+  /**
+   * 沉浸态开关：开局后（ai/pvp 点「开始对局」）棋盘全屏 + HUD 覆盖。
+   * 移动端（≤860px）在开局手势内顺带请求系统全屏（浏览器允许）。
+   */
+  function setImmersive(on) {
+    var was = document.body.classList.contains('immersive');
+    document.body.classList.toggle('immersive', on);
+    $('hud').classList.toggle('hidden', !on);
+    if (on && !was) requestFullscreenIfMobile();
+    if (!on && was) exitFullscreenIfNeeded();
+    if (state.view === 'game') resizeBoard();
+  }
+
+  function requestFullscreenIfMobile() {
+    if (!window.matchMedia('(max-width: 860px)').matches) return;
+    var el = document.documentElement;
+    var fn = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+    if (!fn) return;
+    if (document.fullscreenElement || document.webkitFullscreenElement) return;
+    try { fn.call(el); } catch (e) { /* iOS Safari 或权限拒绝：忽略 */ }
+  }
+
+  function exitFullscreenIfNeeded() {
+    var fn = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+    if (!fn) return;
+    if (!document.fullscreenElement && !document.webkitFullscreenElement) return;
+    try { fn.call(document); } catch (e) { /* ignore */ }
+  }
+
+  /** 移动端触觉反馈（不支持时静默）。 */
+  function buzz(ms) {
+    if (navigator.vibrate) { try { navigator.vibrate(ms || 15); } catch (e) { } }
   }
 
   // ─────────────────────────── Toast / Modal ───────────────────────────
@@ -111,12 +148,23 @@
   // ─────────────────────────── 棋盘渲染 ───────────────────────────
 
   function resizeBoard() {
-    // 棋盘内容边长 = board-wrap 的 CSS 宽度（board-wrap 宽 = 滚动容器可视宽 × zoomLevel）
+    // 棋盘内容边长 = 滚动容器可视尺寸 × zoomLevel。
+    // 普通态：仅按宽度（正方形）；沉浸态：HUD 上下占位约束高度，取宽/高较小值。
     var wrap = document.querySelector('.board-scroll');
     var baseW = wrap ? wrap.clientWidth : board.parentElement.clientWidth;
-    var applied = Math.round(baseW * zoomLevel);
+    var baseH = baseW;
+    if (document.body.classList.contains('immersive') && wrap) {
+      var cs = getComputedStyle(wrap);
+      var padT = parseFloat(cs.paddingTop) || 0;
+      var padB = parseFloat(cs.paddingBottom) || 0;
+      var padL = parseFloat(cs.paddingLeft) || 0;
+      var padR = parseFloat(cs.paddingRight) || 0;
+      baseW = wrap.clientWidth - padL - padR;
+      baseH = Math.max(120, wrap.clientHeight - padT - padB);
+    }
+    var applied = Math.round(Math.min(baseW, baseH) * zoomLevel);
     var bw = document.querySelector('.board-wrap');
-    if (bw) { bw.style.width = applied + 'px'; }
+    if (bw) { bw.style.width = applied + 'px'; bw.style.height = applied + 'px'; }
     boardCssSize = applied;
     dpr = window.devicePixelRatio || 1;
     board.width = Math.round(boardCssSize * dpr);
@@ -129,6 +177,8 @@
     zoomLevel = Math.max(0.5, Math.min(3, z));
     var lb = $('zoom-label');
     if (lb) lb.textContent = Math.round(zoomLevel * 100) + '%';
+    var ml = $('m-zoom-label'); // 沉浸态 ⋯ 菜单内的缩放标签
+    if (ml) ml.textContent = Math.round(zoomLevel * 100) + '%';
     resizeBoard();
   }
 
@@ -322,6 +372,8 @@
   function renderClocks() {
     $('p-black-clock').textContent = fmtClock(state.timers.black);
     $('p-white-clock').textContent = fmtClock(state.timers.white);
+    $('hud-p-black-clock').textContent = fmtClock(state.timers.black);
+    $('hud-p-white-clock').textContent = fmtClock(state.timers.white);
   }
 
   /** host 权威计时：每秒给当前回合方 +1（人机/建房端）。 */
@@ -356,55 +408,63 @@
   }
 
   function renderPlayers(players) {
-    // players: [{seat, name}]（联机）
-    if (state.mode === 'pvp') {
-      $('p-black-name').textContent = '黑方';
-      $('p-white-name').textContent = '白方';
-      return;
-    }
-    if (state.mode === 'ai') {
+    // players: [{seat, name}]（联机）；名字同时同步到侧栏与沉浸 HUD
+    var bn, wn;
+    if (state.mode === 'pvp') { bn = '黑方'; wn = '白方'; }
+    else if (state.mode === 'ai') {
       var youBlack = myColor() === E.BLACK;
-      $('p-black-name').textContent = youBlack ? '你' : 'AI ' + state.aiLevel + ' 段';
-      $('p-white-name').textContent = youBlack ? 'AI ' + state.aiLevel + ' 段' : '你';
-      return;
+      bn = youBlack ? '你' : 'AI ' + state.aiLevel + ' 段';
+      wn = youBlack ? 'AI ' + state.aiLevel + ' 段' : '你';
+    } else {
+      bn = '黑方'; wn = '白方 · 等待加入';
+      if (players) {
+        players.forEach(function (pl) {
+          if (pl.seat === 'black') bn = pl.name + (state.isHost ? '' : '');
+          if (pl.seat === 'white') wn = pl.name;
+        });
+      }
     }
-    var black = '黑方', white = '白方 · 等待加入';
-    if (players) {
-      players.forEach(function (pl) {
-        if (pl.seat === 'black') black = pl.name + (state.isHost ? '' : '');
-        if (pl.seat === 'white') white = pl.name;
-      });
-    }
-    $('p-black-name').textContent = black;
-    $('p-white-name').textContent = white;
+    $('p-black-name').textContent = bn;
+    $('p-white-name').textContent = wn;
+    $('hud-p-black-name').textContent = bn;
+    $('hud-p-white-name').textContent = wn;
   }
 
   function updateStatus() {
+    // 状态文本同时写入侧栏状态条与沉浸 HUD 状态胶囊（hud 附加样式类）
     var el = $('game-status');
+    var hud = $('hud-status');
+    var txt = '', cls = '';
     var g = state.game;
     if (g.over) {
-      if (g.over.winner === 0) el.textContent = '平局';
+      if (g.over.winner === 0) txt = '平局';
+      else if (g.over.reason === 'forbid') txt = '黑方禁手判负'; // 【GOKUP-003】区分禁手原因
       else {
         var w = g.over.winner === E.BLACK ? '黑方' : '白方';
-        el.textContent = w + ' 获胜';
+        txt = w + ' 获胜';
       }
-      return;
-    }
-    if (state.mode !== 'ai' && state.mode !== 'pvp' && !state.net) { el.textContent = '连接中…'; return; }
-    if (state.mode === 'ai' || state.mode === 'pvp') {
+      if (state.mode === 'ai') cls = (g.over.winner === myColor()) ? 'over-win' : 'over-lose';
+    } else if (state.mode !== 'ai' && state.mode !== 'pvp' && !state.net) {
+      txt = '连接中…';
+    } else if (state.mode === 'ai' || state.mode === 'pvp') {
       // 未开局：状态条显示等待，不提示轮次
-      if (!state.aiStarted) { el.textContent = '等待开局…'; return; }
-      if (state.mode === 'ai') {
+      if (!state.aiStarted) { txt = '等待开局…'; }
+      else if (state.mode === 'ai') {
         var playerColor = myColor();
-        el.textContent = (g.turn === playerColor ? '轮到你' : 'AI 思考中…');
-        return;
+        if (g.turn === playerColor) { txt = '轮到你'; cls = 'turn-me'; }
+        else { txt = 'AI 思考中…'; cls = 'thinking'; }
       }
-      el.textContent = '轮到' + (g.turn === E.BLACK ? '黑方落子' : '白方落子');
-      return;
+      else txt = '轮到' + (g.turn === E.BLACK ? '黑方落子' : '白方落子');
+    } else if (state.mySeat === 'spectator') {
+      txt = '观战中';
+    } else {
+      var mine = (g.turn === E.BLACK) ? 'black' : 'white';
+      txt = (mine === state.mySeat) ? '轮到你落子' : '等待对方落子';
+      if (mine === state.mySeat) cls = 'turn-me';
     }
-    if (state.mySeat === 'spectator') { el.textContent = '观战中'; return; }
-    var mine = (g.turn === E.BLACK) ? 'black' : 'white';
-    el.textContent = (mine === state.mySeat) ? '轮到你落子' : '等待对方落子';
+    el.textContent = txt;
+    hud.textContent = txt;
+    hud.className = 'hud-status' + (cls ? ' ' + cls : '');
   }
 
   function highlightTurn() {
@@ -412,6 +472,8 @@
     var seat = (state.game.over || aiNotStarted) ? null : (state.game.turn === E.BLACK ? 'black' : 'white');
     $('p-black').classList.toggle('active', seat === 'black');
     $('p-white').classList.toggle('active', seat === 'white');
+    $('hud-p-black').classList.toggle('active', seat === 'black');
+    $('hud-p-white').classList.toggle('active', seat === 'white');
   }
 
   function refreshUI() {
@@ -431,6 +493,10 @@
     // 导出按钮：有落子即可导出
     $('btn-export-json').disabled = !(g.moves.length > 0);
     $('btn-export-csv').disabled = !(g.moves.length > 0);
+    // 沉浸 HUD 操作条与侧栏按钮同状态（侧栏隐藏时仍由本函数统一驱动）
+    $('btn-hud-undo').disabled = $('btn-undo').disabled;
+    $('btn-hud-resign').disabled = $('btn-resign').disabled;
+    $('btn-hud-restart').disabled = $('btn-restart').disabled;
     return canAct;
   }
 
@@ -441,6 +507,7 @@
     return {
       mode: state.mode,
       level: state.mode === 'ai' ? state.aiLevel : null,
+      forbidEnabled: !!state.forbidEnabled, // 禁手状态（复盘/训练必须可追溯）
       players: {
         black: seatName('black'),
         white: state.mode === 'ai' ? seatName('white') : seatName('white')
@@ -540,7 +607,12 @@
       }
       var r = g.play(x, y);
       if (!r.ok) {
-        if (r.reason === 'forbid') { toast('禁手：' + r.forbid + '，不可落子'); return; }
+        if (r.reason === 'forbid') {
+          // 【GOKUP-003 / RIF】黑棋落禁手点即判负（白胜），对局立即结束，不再"重走"。
+          // 禁手只可能发生在黑方回合（engine.checkForbid 仅判黑），此处按落子方防御判断。
+          if (g.turn === E.BLACK) finishByForbid(r.forbid);
+          else toast('禁手：' + r.forbid + '，不可落子');
+        }
         return;
       }
       A.place();
@@ -561,6 +633,7 @@
   }
 
   function afterLocalMove(r) {
+    buzz(15); // 移动端触觉反馈
     refreshUI();
     // 三手交换：前三手落定且未裁决时触发
     if (state.swapEnabled && !state.swapDecided && state.game.moves.length === 3 && !state.game.over) {
@@ -730,7 +803,11 @@
         // 思考期间有人悔棋/重开 → moves 长度变了 → 丢弃过期结果（不重放）
         if (state.game.moves.length !== movesAtRequest) return;
         var r = state.game.play(mv.x, mv.y);
-        if (!r.ok) return;
+        if (!r.ok) {
+          // 【GOKUP-003】AI 执黑若返回禁手点（防御性，正常 AI 内置避禁）→ 黑负白胜终局
+          if (r.reason === 'forbid') finishByForbid(r.forbid);
+          return;
+        }
         A.place();
         state.lastMove = { x: mv.x, y: mv.y };
         animateStone(mv.x, mv.y, aiColor, drawBoard);
@@ -758,7 +835,11 @@
           var seatOfTurn = g.turn === E.BLACK ? 'black' : 'white';
           if (fromSeat !== state.mySeat && seatOfTurn !== fromSeat) return; // 非本方回合，丢弃
           var r = g.play(msg.x, msg.y);
-          if (!r.ok) return;
+          if (!r.ok) {
+            // 【GOKUP-003】联机禁手：host 权威——黑方（含远端/本地黑）落禁手点 → 白胜终局并广播
+            if (r.reason === 'forbid') handleNetMessage({ type: 'forbid', forbid: r.forbid }, fromSeat);
+            return;
+          }
           A.place();
           state.lastMove = { x: msg.x, y: msg.y };
           state.net.broadcast('move', { x: msg.x, y: msg.y, seq: g.seq, timers: state.timers });
@@ -769,6 +850,7 @@
         var r2 = g.play(msg.x, msg.y);
         if (!r2.ok) return;
         if (msg.timers) state.timers = msg.timers;
+        buzz(15); // 移动端触觉反馈
         A.place();
         state.lastMove = { x: msg.x, y: msg.y };
         var mover = g.moves.length ? g.moves[g.moves.length - 1].player : E.BLACK;
@@ -896,6 +978,24 @@
         return;
       }
 
+      case 'forbid': {
+        // 【GOKUP-003 / RIF】禁手终局：黑方落禁手点 → 黑负、白胜。
+        // host 权威落库并广播，双端/观战者收到同一消息渲染一致终局。
+        if (g.over) return;
+        var forbidTxt = msg.forbid || '';
+        g.over = { winner: E.WHITE, line: null, reason: 'forbid', forbid: forbidTxt };
+        var iFWin = state.mySeat === 'white';
+        if (iFWin) A.win(); else A.lose();
+        showGameOver(g.over, iFWin, 'remote');
+        drawBoard();
+        if (state.isHost) {
+          saveHistory(g.over, 'remote');
+          state.net.broadcast('forbid', { forbid: forbidTxt });
+        }
+        refreshUI();
+        return;
+      }
+
       case 'restart-req': {
         if (fromSeat === state.mySeat) return;
         var close2 = openModal(
@@ -999,6 +1099,7 @@
     state.aiLevel = level;
     state.aiStarted = false;
     startNewGame(true);
+    setImmersive(false); // 设置态用侧栏，开局后才全屏
     showView('game');
     $('conn-indicator').classList.add('hidden');
     $('chat-box').style.display = 'none';
@@ -1013,6 +1114,8 @@
     // 对局进行中禁止重开（按钮已禁用，双保险）
     if (state.aiStarted && !state.game.over) return;
     state.aiStarted = true;
+    // 【GOKUP-003】开局时同步禁手开关到引擎（首局 moves=0 不重置 startNewGame，需显式同步）
+    state.game.forbidEnabled = state.forbidEnabled;
     if (state.game.moves.length > 0) startNewGame(true); // 上一局残局清盘
     state.mySeat = state.playerFirst ? 'black' : 'white';
     renderPlayers(null);
@@ -1025,6 +1128,7 @@
       aiFirstMove();
     }
     refreshUI(); // 【2026-08-16】开局后刷新状态条/开关锁定（aiStarted 已置位；新开局无残局时不走 startNewGame，此前状态条停留在「等待开局…」）
+    setImmersive(true); // 【2026-08-21】开局 → 棋盘全屏沉浸 + HUD 覆盖
   }
 
   /**
@@ -1041,6 +1145,7 @@
     state.swapDecided = false;
     state.swapped = false;
     startNewGame(true);
+    setImmersive(false); // 设置态用侧栏，开局后才全屏
     showView('game');
     $('conn-indicator').classList.add('hidden');
     $('chat-box').style.display = 'none';
@@ -1054,11 +1159,14 @@
     if (state.mode !== 'pvp') return;
     if (state.aiStarted && !state.game.over) return;
     state.aiStarted = true;
+    // 【GOKUP-003】开局时同步禁手开关到引擎（首局 moves=0 不重置 startNewGame，需显式同步）
+    state.game.forbidEnabled = state.forbidEnabled;
     if (state.game.moves.length > 0) startNewGame(true);
     renderPlayers(null);
     startTicker();
     toast(state.swapEnabled ? '本地双人 · 黑先白后（黑 1 天元，前三手后白方可交换）' : '本地双人 · 黑先白后');
     refreshUI();
+    setImmersive(true); // 【2026-08-21】开局 → 棋盘全屏沉浸 + HUD 覆盖
   }
 
   /**
@@ -1093,7 +1201,12 @@
         if (!mv || state.mode !== 'ai' || state.playerFirst || state.game.over) return;
         if (!state.aiStarted) return;
         var r = state.game.play(mv.x, mv.y);
-        if (!r.ok) { setTimeout(doIt, 300); return; }
+        if (!r.ok) {
+          // 【GOKUP-003】AI 先手黑第 1 手理论上不可能禁手，仍防御处理（黑负白胜）
+          if (r.reason === 'forbid') { finishByForbid(r.forbid); return; }
+          setTimeout(doIt, 300);
+          return;
+        }
         A.place();
         state.lastMove = { x: mv.x, y: mv.y };
         animateStone(mv.x, mv.y, E.BLACK, drawBoard);
@@ -1250,6 +1363,12 @@
   function applySnapshot(snap) {
     if (!snap) return;
     state.game.load(snap);
+    // 【GOKUP-003】Game.load 只恢复 winner/line；补回 reason/forbid，
+    // 保证断线重连后禁手判负终局的状态条/导出仍能识别"黑方禁手判负"。
+    if (snap.over && state.game.over) {
+      state.game.over.reason = snap.over.reason;
+      state.game.over.forbid = snap.over.forbid;
+    }
     if (snap.timers) state.timers = snap.timers;
     state.lastMove = snap.moves && snap.moves.length
       ? { x: snap.moves[snap.moves.length - 1].x, y: snap.moves[snap.moves.length - 1].y }
@@ -1380,6 +1499,24 @@
     refreshUI();
   }
 
+  /**
+   * 【GOKUP-003 / RIF】黑棋禁手判负收尾：黑方落禁手点 → 黑负、白胜，对局立即结束。
+   * 复用既有 showGameOver/saveHistory/refreshUI 终局路径，不重复渲染代码。
+   * @param forbid 禁手类型字符串（'三三'/'四四'/'长连' 或组合），必须保留并展示。
+   */
+  function finishByForbid(forbid) {
+    var g = state.game;
+    if (g.over) return;
+    g.over = { winner: E.WHITE, line: null, reason: 'forbid', forbid: forbid || '' };
+    var playerColor = myColor();
+    var iWin = (playerColor === E.WHITE) || (state.mySeat === 'white');
+    if (iWin) A.win(); else A.lose();
+    showGameOver(g.over, iWin);
+    saveHistory(g.over);
+    refreshUI();
+    drawBoard();
+  }
+
   function doRestart() {
     if (state.mode === 'ai') {
       // 【2026-08-16】先关闭任何弹窗（三手交换选择窗等）——弹窗残留会挡住
@@ -1431,6 +1568,7 @@
     var sub;
     if (over.reason === 'resign') sub = '对方认输';
     else if (over.reason === 'timeout') sub = '对方超时未归';
+    else if (over.reason === 'forbid') sub = '黑方禁手（' + (over.forbid || '禁手') + '）判负';
     else sub = '五子连珠';
     return { big: w + ' 胜', sub: sub, win: true, draw: false };
   }
@@ -1895,6 +2033,7 @@
       mode: 'ai',
       level: state.aiLevel,
       engine: 'fusion',
+      forbidEnabled: !!state.forbidEnabled, // 禁手状态（复盘/训练必须可追溯）
       winner: g.over ? (g.over.winner === E.BLACK ? 'black' : g.over.winner === E.WHITE ? 'white' : 'draw') : 'ongoing',
       moves: g.moves.map(function (m) {
         return { x: m.x, y: m.y, player: m.player === E.BLACK ? 'black' : 'white' };
@@ -1977,6 +2116,74 @@
     if (state.net) { try { state.net.close(); } catch (e) { /* ignore */ } state.net = null; }
     goHome();
   });
+
+  // ─────────────────────────── 沉浸式 HUD 事件 ───────────────────────────
+
+  $('btn-hud-leave').addEventListener('click', function () {
+    if (state.net) { try { state.net.close(); } catch (e) { /* ignore */ } state.net = null; }
+    goHome();
+  });
+  $('btn-hud-undo').addEventListener('click', doUndo);
+  $('btn-hud-resign').addEventListener('click', doResign);
+  $('btn-hud-restart').addEventListener('click', doRestart);
+
+  /** ⋯ 菜单：缩放 / 导出 / 返回大厅（补全沉浸态被隐藏的侧栏功能） */
+  function openHudMenu() {
+    var close = openModal(
+      '<div class="modal-title">对局菜单</div>' +
+      '<div class="modal-body" style="margin-bottom:8px;">棋盘缩放</div>' +
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">' +
+      '<button class="btn outline" id="m-zoom-out">−</button>' +
+      '<span id="m-zoom-label" style="flex:1;text-align:center;font-family:var(--mono);font-size:15px;color:var(--text);">' + Math.round(zoomLevel * 100) + '%</span>' +
+      '<button class="btn outline" id="m-zoom-in">＋</button>' +
+      '<button class="btn outline" id="m-zoom-reset">重置</button>' +
+      '</div>' +
+      '<div class="modal-actions">' +
+      '<button class="btn outline" id="m-export-json">导出 JSON</button>' +
+      '<button class="btn outline" id="m-export-csv">导出 CSV</button>' +
+      '</div>' +
+      '<div class="modal-actions">' +
+      '<button class="btn outline" data-dismiss>关闭</button>' +
+      '<button class="btn primary" id="m-leave">返回大厅</button>' +
+      '</div>'
+    );
+    $('m-zoom-in').addEventListener('click', function () { setBoardZoom(zoomLevel + 0.25); });
+    $('m-zoom-out').addEventListener('click', function () { setBoardZoom(zoomLevel - 0.25); });
+    $('m-zoom-reset').addEventListener('click', function () { setBoardZoom(1); });
+    $('m-export-json').addEventListener('click', doExportCurrentJSON);
+    $('m-export-csv').addEventListener('click', doExportCurrentCSV);
+    $('m-leave').addEventListener('click', function () { close(); goHome(); });
+  }
+  $('btn-hud-menu').addEventListener('click', openHudMenu);
+
+  // 沉浸态：滚轮 / 双指捏合缩放棋盘（普通态保留按钮缩放）
+  var scrollEl = document.querySelector('.board-scroll');
+  var pinchDist = 0;
+  var pinchTouches = null;
+  scrollEl.addEventListener('wheel', function (ev) {
+    if (!document.body.classList.contains('immersive')) return;
+    ev.preventDefault();
+    var f = ev.deltaY < 0 ? 1.08 : 0.925;
+    setBoardZoom(zoomLevel * f);
+  }, { passive: false });
+  scrollEl.addEventListener('touchstart', function (ev) {
+    if (!document.body.classList.contains('immersive')) return;
+    if (ev.touches.length === 2) {
+      pinchTouches = ev.touches;
+      pinchDist = Math.hypot(ev.touches[0].clientX - ev.touches[1].clientX,
+                             ev.touches[0].clientY - ev.touches[1].clientY);
+    } else if (ev.touches.length < 2) { pinchTouches = null; }
+  }, { passive: true });
+  scrollEl.addEventListener('touchmove', function (ev) {
+    if (!document.body.classList.contains('immersive')) return;
+    if (ev.touches.length === 2 && pinchTouches) {
+      var d = Math.hypot(ev.touches[0].clientX - ev.touches[1].clientX,
+                         ev.touches[0].clientY - ev.touches[1].clientY);
+      if (pinchDist > 0) setBoardZoom(zoomLevel * (d / pinchDist));
+      pinchDist = d;
+    }
+  }, { passive: true });
+  scrollEl.addEventListener('touchend', function () { pinchTouches = null; }, { passive: true });
 
   $('btn-history-clear').addEventListener('click', function () {
     if (Store.loadAll().length === 0) return;

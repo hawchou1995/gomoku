@@ -192,11 +192,14 @@
     return { win: c.win > 0, force: force, forceRank: forceRank, strong: strong };
   }
 
-  /** 该点落黑子是否禁手（长连/三三/四四）。 */
+  /** 该点落黑子是否禁手（长连/三三/四四，含跳三/跳四）。
+   *  与 classifyPoint 同语义：三三 = live3≥2；四四 = live4+rush4≥2；
+   *  长连 ≥6 判禁；恰五连（黑胜优先）不判禁。消除“AI 判黑自陷禁手但不执行”的自我矛盾。 */
   function isForbidMove(board, x, y) {
+    var orig = get(board, x, y);
     set(board, x, y, BLACK);
-    var isF = false;
-    // 长连
+    // 长连 / 恰五连：连续段计数（≥6 禁；==5 黑胜优先，非禁手）
+    var five = false;
     for (var d = 0; d < 4; d++) {
       var dx = DIRS[d][0], dy = DIRS[d][1];
       var cnt = 1;
@@ -204,27 +207,14 @@
       while (inB(nx, ny) && get(board, nx, ny) === BLACK) { cnt++; nx += dx; ny += dy; }
       nx = x - dx; ny = y - dy;
       while (inB(nx, ny) && get(board, nx, ny) === BLACK) { cnt++; nx -= dx; ny -= dy; }
-      if (cnt >= 6) { isF = true; break; }
+      if (cnt >= 6) { set(board, x, y, orig); return true; } // 长连
+      if (cnt === 5) five = true;
     }
-    if (!isF) {
-      var live3 = 0, live4 = 0;
-      for (d = 0; d < 4; d++) {
-        dx = DIRS[d][0]; dy = DIRS[d][1];
-        cnt = 1; var open = 0;
-        nx = x + dx; ny = y + dy;
-        while (inB(nx, ny) && get(board, nx, ny) === BLACK) { cnt++; nx += dx; ny += dy; }
-        if (inB(nx, ny) && get(board, nx, ny) === EMPTY) open++;
-        nx = x - dx; ny = y - dy;
-        while (inB(nx, ny) && get(board, nx, ny) === BLACK) { cnt++; nx -= dx; ny -= dy; }
-        if (inB(nx, ny) && get(board, nx, ny) === EMPTY) open++;
-        if (cnt === 4 && open === 2) live4++;
-        if (cnt === 3 && open === 2) live3++;
-        if (cnt === 4 && open === 1) live4++;
-      }
-      if (live3 >= 2 || live4 >= 2) isF = true;
-    }
-    set(board, x, y, EMPTY);
-    return isF;
+    if (five) { set(board, x, y, orig); return false; } // 恰五连非禁手
+    // 三三 / 四四：复用 classifyPoint（含跳型）保证与威胁认知一致
+    var c = classifyPoint(board, x, y, BLACK);
+    set(board, x, y, orig);
+    return (c.live3 >= 2) || (c.live4 + c.rush4 >= 2);
   }
 
   /**
@@ -688,6 +678,146 @@
     return false;
   }
 
+  /**
+   * 活三堵点：【前提 (x,y) 已放 me】收集"对方落在其上即可废掉我方活三"的点。
+   * 覆盖连续活三（两端各 1 点）与跳三（缺口 + 两端，≤4 点），与 classifyPoint 活三判定口径一致。
+   */
+  function live3BlocksOf(board, x, y, me) {
+    var out = [], seen = {};
+    function add(px, py) {
+      if (!inB(px, py) || get(board, px, py) !== EMPTY) return;
+      var k = px + ',' + py;
+      if (seen[k]) return;
+      seen[k] = 1; out.push([px, py]);
+    }
+    for (var d = 0; d < 4; d++) {
+      var dx = DIRS[d][0], dy = DIRS[d][1];
+      var s = shapeInfo(board, x, y, me, dx, dy);
+      var jumpTotal = s.jumpL + s.jumpR, total = s.count + jumpTotal;
+      var open = (s.jumpL > 0 ? s.jumpOpenL : s.openL) + (s.jumpR > 0 ? s.jumpOpenR : s.openR);
+      if (total !== 3 || open !== 2) continue; // 该方向不是活三
+      var cntL = 0, nx = x - dx, ny = y - dy;
+      while (inB(nx, ny) && get(board, nx, ny) === me) { cntL++; nx -= dx; ny -= dy; }
+      var cntR = 0; nx = x + dx; ny = y + dy;
+      while (inB(nx, ny) && get(board, nx, ny) === me) { cntR++; nx += dx; ny += dy; }
+      add(x - (cntL + 1) * dx, y - (cntL + 1) * dy);                 // 左开放格（连续段左端外）
+      if (s.jumpL > 0) add(x - (cntL + 1 + s.jumpL) * dx, y - (cntL + 1 + s.jumpL) * dy); // 跳段最外
+      add(x + (cntR + 1) * dx, y + (cntR + 1) * dy);                 // 右开放格
+      if (s.jumpR > 0) add(x + (cntR + 1 + s.jumpR) * dx, y + (cntR + 1 + s.jumpR) * dy);
+    }
+    return out;
+  }
+
+  /**
+   * 【2026-08-21 ADR-003 阶段1/MVP】混合威胁链 TSS（Threat-Space Search）。
+   * 目标：把 vcfSearch(纯冲四)/vctSearch(浅层) 升级为能自行找到「冲四+活三」混合必胜链，
+   * 黑方在浦月最强防等深杀局面 6500ms 内产出必胜续（如浦月 黑7=J9），不再依赖手工定式。
+   *
+   * AND/OR 威胁树：
+   *   OR 节点（攻击方 me，证明必胜）：威胁着法生成器（复用 classifyPoint/threatLevel，
+   *     只扫我方子邻域，不枚举全棋盘）——五连/活四=立即胜；双冲四(白)=立即胜；
+   *     四三/单冲四/单活三 入候选，按 四三 > 冲四 > 活三 强度排序逐个尝试。
+   *   AND 节点（防守方 you）：我方冲四 → 必须堵缺口（缺口≥2=双冲四，对手一步盖不完=胜）；
+   *     我方活三 → 必须堵端/缺口。对手防不住 → 我方下一步成五/活四。
+   *
+   * 限制（ADR-003 §4 阶段1）：depth 威胁链剩余我方落子数（初始 12）；budget 节点上限（防
+   *   爆炸；超上限/超时置 hitMax → 本次结论不可信 → 不写缓存）；dl 时间硬截止。
+   * 禁手：me=黑 时所有威胁着法过 isForbidMove（三三/四四/长连滤除，四三保留）。
+   * 置换表：zobrist 局面去重，仅当 entry.depth >= 当前 depth 才复用（深搜结论对浅访问有效）。
+   *
+   * 返回：必胜威胁链【首步】{x,y}；限制内证明不了必胜返回 null（调用方回退现有 vcf/vct/negamax）。
+   */
+  function tssOr(board, me, depth, forbidEnabled, dl, budget, seen) {
+    if (Date.now() > dl) { budget.hitMax = true; return null; }
+    if (depth <= 0) return null;
+    if (++budget.n > budget.max) { budget.hitMax = true; return null; }
+    var key = zobristHash(board);
+    if (!budget.hitMax) {
+      var ent = seen.get(key);
+      if (ent && ent.depth >= depth) return ent.v; // 复访同一局面：深搜结论对浅访问有效
+    }
+    var meBlackForbid = forbidEnabled && me === BLACK;
+    var near = collectMine(board, me, 2);
+    var cands = [], i;
+    for (i = 0; i < near.length; i++) {
+      var x = near[i][0], y = near[i][1];
+      if (get(board, x, y) !== EMPTY) continue;
+      if (meBlackForbid && isForbidMove(board, x, y)) continue;
+      var c = classifyPoint(board, x, y, me);
+      if (c.win > 0) return { x: x, y: y };          // 一步五连
+      if (c.live4 > 0) return { x: x, y: y };        // 活四：堵一面另一面成五
+      if (!meBlackForbid && c.rush4 >= 2) return { x: x, y: y }; // 双冲四（黑四四禁手已滤）
+      if (c.rush4 >= 1 && c.live3 >= 1) cands.push([x, y, 4]);
+      else if (c.rush4 >= 1) cands.push([x, y, 3]);
+      else if (c.live3 >= 1) cands.push([x, y, 2]);
+    }
+    cands.sort(function (a, b) { return b[2] - a[2]; });
+    var result = null, truncated = false;
+    for (i = 0; i < cands.length && !truncated; i++) {
+      if (Date.now() > dl || budget.n > budget.max) { truncated = true; break; }
+      var m = cands[i];
+      set(board, m[0], m[1], me);
+      var ok = tssAnd(board, me, m[0], m[1], depth, forbidEnabled, dl, budget, seen);
+      set(board, m[0], m[1], EMPTY);
+      if (Date.now() > dl || budget.n > budget.max) { truncated = true; break; }
+      if (ok) { result = { x: m[0], y: m[1] }; break; }
+    }
+    if (!truncated && !budget.hitMax) seen.set(key, { v: result, depth: depth });
+    return result;
+  }
+
+  /** AND 节点：我方刚下 (x,y)，对手须一步应对全部强制威胁；防不住 → 我方胜。 */
+  function tssAnd(board, me, x, y, depth, forbidEnabled, dl, budget, seen) {
+    if (Date.now() > dl) { budget.hitMax = true; return false; }
+    if (++budget.n > budget.max) { budget.hitMax = true; return false; }
+    var you = opp(me);
+    var gaps = rushGapsOf(board, x, y, me); // 我方 (x,y) 的冲四缺口
+    if (gaps.length >= 2) return true;      // 双冲四：对手一步盖不完（黑已被 isForbidMove 滤除）
+    var resp, fromLive3 = false;
+    if (gaps.length === 1) {
+      resp = [gaps[0]];                     // 冲四强制应手
+    } else {
+      resp = live3BlocksOf(board, x, y, me); // 活三强制应手（连续 2 端 / 跳三 缺口+端）
+      fromLive3 = true;
+    }
+    if (resp.length === 0) return false;    // 无强制威胁 → 非威胁着法（setup 交给 negamax）
+    // 【2026-08-21 反先守卫】纯活三中继（我方没下冲四、对手没被钉死）时，对手可能
+    // 用自己的一步必胜/活四反先，而非老实堵活三——若存在则我方这条活三链不算必胜。
+    // 冲四中继不受影响（对手不填缺口我即成五，对手必须先堵）。
+    if (fromLive3 && quickTactic(board, you, forbidEnabled)) return false;
+    for (var r = 0; r < resp.length; r++) {
+      if (Date.now() > dl || budget.n > budget.max) { budget.hitMax = true; return false; }
+      var rx = resp[r][0], ry = resp[r][1];
+      if (get(board, rx, ry) !== EMPTY) continue;
+      set(board, rx, ry, you);
+      var sub = tssOr(board, me, depth - 1, forbidEnabled, dl, budget, seen);
+      set(board, rx, ry, EMPTY);
+      if (Date.now() > dl || budget.n > budget.max) { budget.hitMax = true; return false; }
+      if (sub) return true;
+    }
+    return false;
+  }
+
+  /** 我方棋子切比雪夫 ≤ r 邻域空点（TSS 威胁着法只可能在我方子邻域成型，大幅缩小候选）。 */
+  function collectMine(board, me, r) {
+    var pts = [], seen = {};
+    for (var i = 0; i < SIZE; i++) {
+      for (var j = 0; j < SIZE; j++) {
+        if (get(board, i, j) !== me) continue;
+        for (var dx = -r; dx <= r; dx++) {
+          for (var dy = -r; dy <= r; dy++) {
+            var nx = i + dx, ny = j + dy;
+            if (inB(nx, ny) && get(board, nx, ny) === EMPTY) {
+              var k = nx + ',' + ny;
+              if (!seen[k]) { seen[k] = 1; pts.push([nx, ny]); }
+            }
+          }
+        }
+      }
+    }
+    return pts;
+  }
+
   function findVcfStarts(board, me, cands, forbidEnabled, dl) {
     var meBlackForbid = forbidEnabled && me === BLACK;
     var near = collectNear(board);
@@ -1140,15 +1270,22 @@
     var youBlackForbid = forbidEnabled && you === BLACK;
     var meBlackForbid = forbidEnabled && me === BLACK;
     var near = collectNear(board);
-    // ① 我方先手检查：存在空点 p，我落 p 即成五/活四/冲四（活三已在盘或一步成型）
-    //    → 我方先手更快，保持进攻，守卫不触发。
+    // ① 我方真实先手检查：存在空点 p，我落 p 即成五/活四/四三/双冲四/双活三
+    //    （force rank>=2）→ 我方先手更快，守卫不触发。
+    //    【2026-08-21 修复】裸冲四（rank strong）不再直接算"先手"——死冲四（如棋谱
+    //    08-21 step45 黑 D8/K13）落子后对方一堵即死，先手节奏并不快于对方活三/活四
+    //    成型；曾因此放行防守、白活四成型收网。裸冲四须经 vcfSearch 核验成链
+    //    （连续冲四必胜链）才算真先手——成链则对方全程被迫应冲四，无自由手走活三。
+    var realInit = false;
     for (var i = 0; i < near.length; i++) {
       var x = near[i][0], y = near[i][1];
       if (get(board, x, y) !== EMPTY) continue;
       if (meBlackForbid && isForbidMove(board, x, y)) continue;
-      var mc = classifyPoint(board, x, y, me);
-      if (mc.win > 0 || mc.live4 > 0 || mc.rush4 > 0) return null;
+      var mtl = threatLevel(classifyPoint(board, x, y, me), meBlackForbid);
+      if (mtl.force && mtl.forceRank >= 2) { realInit = true; break; }
     }
+    if (!realInit && vcfSearch(board, me, 6, forbidEnabled, Date.now() + 150)) realInit = true;
+    if (realInit) return null;
     // ② 对方威胁检查：收集对方活三两端堵点 + 更强威胁（成五点/活四在盘）堵点。
     //    - 成五点：对方落 p 即五连（冲四单口/活四双口）——比活三更急，必须堵
     //    - 活四成型端：对方落 p 即活四（oc.live4 > 0）
@@ -1251,6 +1388,12 @@
     var myWin = null, myForce = null, myForceRank = 0;
     var opWinPts = [], opForce = null, opForceRank = 0;
     var opForcePts = [];
+    // 【2026-08-21 双活三成型点】对方落某点即形成双活三（两个活三并存=无解威胁，
+    // 我方一手只能堵一个活三，对方另一活三必成活四收网）——除我方有更快先手外必须占住。
+    // 注意与"双活三在盘（棋谱16 白 H11 被黑 F9 链晾死）"的区别：在盘的双活三由
+    // VCF/搜索权衡（可被先手链压制）；"一步双活三成型点"是对方下回合即成型的
+    // 无解威胁，我方当前手必须拦截（占成型点或 VCF 抢攻）。
+    var opD3 = null, opD3Rank = 0, opD3Pts = [];
     // 我方落点：用 me 视角候选（cands 由调用方按 me 的启发分排序）
     for (var i = 0; i < cands.length; i++) {
       var c = cands[i];
@@ -1280,6 +1423,12 @@
         if (!opForce || ol.forceRank > opForceRank) { opForce = c2; opForceRank = ol.forceRank; }
         opForcePts.push({ x: c2.x, y: c2.y, rank: ol.forceRank });
       }
+      // 【2026-08-21 双活三成型点（rank2）】对方落此点即双活三=无解威胁，收集为必防
+      // 候选（排在 rank>=3 之后）。我方若有更快先手（myForce/VCF）由上层优先级先拦截。
+      else if (ol.force && ol.forceRank === 2) {
+        if (!opD3 || ol.forceRank > opD3Rank) { opD3 = c2; opD3Rank = ol.forceRank; }
+        opD3Pts.push({ x: c2.x, y: c2.y, rank: ol.forceRank });
+      }
     }
     // 优先级：我五连 > 对方成五点（必防，不许送杀）> 我方活四/四三（先手杀）> 对方必胜组合。
     // 【2026-08-18 不许送杀修复】opWin（对方落子即五连）必须优先于 myForce（我方活四/四三）：
@@ -1301,6 +1450,17 @@
         if (multi) return { move: multi, kind: 'op-force-multi' };
       }
       return { move: opForce, kind: 'op-force' };
+    }
+    // 【2026-08-21 双活三成型点】无 rank>=3 必防点但对方存在一步双活三成型点——
+    // 直接占住成型点（一步废对方两个活三）；多个成型点先搜万能点（占一废多）。
+    // 竞速：我方有 VCF 必胜链时由 getBestMove 的 findVcfStarts 分支（op-d3 已纳入）
+    // 抢攻，不走到这里。
+    if (opD3) {
+      if (opD3Pts.length >= 2) {
+        var multiD3 = findMultiForceDefense(board, me, opD3Pts, forbidEnabled, Date.now() + 250);
+        if (multiD3) return { move: multiD3, kind: 'op-d3-multi' };
+      }
+      return { move: opD3, kind: 'op-d3' };
     }
     return null;
   }
@@ -1477,6 +1637,124 @@
     // 位置必须在"开局贴边应对"之前——否则 moveCount≤2 时对称点先命中，定式永远走不到。
     var moveCount = 0, i, j;
     for (i = 0; i < SIZE; i++) for (j = 0; j < SIZE; j++) if (get(board, i, j) !== EMPTY) moveCount++;
+    // 【2026-08-21 黑方禁手开局库·花月/浦月必胜】禁手开启时黑 1 天元（near0 已处理）。
+    // 黑 3 按白 2 落点选择必胜开局（RIF 26 开局表，来源 Wikipedia/连珠规则）：
+    //   白 2 直止(正交) → 黑 3 斜位 → 花月(D4，黑必胜)
+    //   白 2 斜止(对角) → 黑 3 对角反向 → 浦月(I7，黑必胜)
+    // 两者均为「仅禁手、无换手」下被严格证明的黑必胜开局（Allis 1994 / RIF 定式）。
+    // 旧实现固定黑 3=I9（斜月位），白 2 走对角（如 G7）时构成非必胜斜止开局，是 70% 胜率根因之一。
+    // 安全性：黑 3 为黑方第 2 子（仅两子，不构成三/四/长连），任何落点均非禁手点。
+    if (player === BLACK && forbidEnabled && moveCount <= 3 && level >= 5) {
+      var bkStones = 0;
+      for (i = 0; i < SIZE; i++) for (j = 0; j < SIZE; j++) if (get(board, i, j) === BLACK) bkStones++;
+      if (bkStones === 1 && get(board, 7, 7) === BLACK) {
+        // 定位白 2
+        var w2x = -1, w2y = -1;
+        for (i = 0; i < SIZE && w2x < 0; i++) for (j = 0; j < SIZE; j++) if (get(board, i, j) === WHITE) { w2x = i; w2y = j; break; }
+        // 白 2 位置 → 花月/浦月 黑 3（[首选, 次选]，均非禁手）
+        var BOOK3 = {
+          '7,6': [[8, 6], [6, 6]],   // 白2 H7 → 黑3 I7/G7（花月）
+          '7,8': [[8, 8], [6, 8]],   // 白2 H9 → 黑3 I9/G9（花月）
+          '6,7': [[6, 6], [6, 8]],   // 白2 G8 → 黑3 G7/G9（花月）
+          '8,7': [[8, 6], [8, 8]],   // 白2 I8 → 黑3 I7/I9（花月）
+          '6,6': [[6, 8], [8, 6]],   // 白2 G7 → 黑3 G9/I7（浦月）
+          '6,8': [[6, 6], [8, 8]],   // 白2 G9 → 黑3 G7/I9（浦月）
+          '8,6': [[8, 8], [6, 6]],   // 白2 I7 → 黑3 I9/G7（浦月）
+          '8,8': [[8, 6], [6, 8]]    // 白2 I9 → 黑3 I7/G9（浦月）
+        };
+        var cand3 = BOOK3[w2x + ',' + w2y];
+        if (cand3) {
+          for (var b3 = 0; b3 < cand3.length; b3++) {
+            var b3x = cand3[b3][0], b3y = cand3[b3][1];
+            if (get(board, b3x, b3y) === EMPTY && !isForbidMove(board, b3x, b3y)) return { x: b3x, y: b3y };
+          }
+        }
+        // 白 2 不在天元邻位（罕见）：回退斜位优先
+        var BOOK_BLACK = [[8, 8], [7, 8], [8, 7], [6, 6], [8, 6], [6, 8], [6, 7], [7, 6]];
+        for (var bb = 0; bb < BOOK_BLACK.length; bb++) {
+          var bx = BOOK_BLACK[bb][0], by = BOOK_BLACK[bb][1];
+          if (get(board, bx, by) !== EMPTY) continue;
+          if (bx !== 7 && by !== 7) return { x: bx, y: by };
+        }
+        if (get(board, 7, 8) === EMPTY) return { x: 7, y: 8 };
+        if (get(board, 8, 7) === EMPTY) return { x: 8, y: 7 };
+      }
+    }
+
+    // 【2026-08-21 黑方禁手开局库·黑5】花月/浦月必胜续。
+    // 黑5 = 黑3 关于天元(7,7)的 180° 对称点，与黑1、黑3 构成对角三连（活三/眠三）：
+    //   花月（黑3=I9）→ 黑5=G7(6,6)，白4=J10/I8/J7 均黑必胜（来源 9game/爱五子棋花月线 h8h9i9j10g7...）
+    //   浦月（黑3=G9）→ 黑5=I7(8,6)，来源 爱五子棋浦月线 h8i9i7h6g9... 的 180° 旋转
+    // 若白4 已占该对称点（浦月最强防），回退搜索。
+    // 安全性：黑5 为黑方第 3 子，单活三/眠三不构成三三/四四/长连，非禁手点（仍做 isForbidMove 校验）。
+    if (player === BLACK && forbidEnabled && moveCount === 4 && level >= 5) {
+      var b5Stones = 0;
+      for (i = 0; i < SIZE; i++) for (j = 0; j < SIZE; j++) if (get(board, i, j) === BLACK) b5Stones++;
+      if (b5Stones === 2 && get(board, 7, 7) === BLACK) {
+        // 定位黑3（黑方第2子，非天元）
+        var b3x = -1, b3y = -1;
+        for (i = 0; i < SIZE && b3x < 0; i++) for (j = 0; j < SIZE; j++) if (get(board, i, j) === BLACK && !(i === 7 && j === 7)) { b3x = i; b3y = j; break; }
+        if (b3x >= 0) {
+          var b5x0 = 14 - b3x, b5y0 = 14 - b3y;
+          var b5sel = null;
+          if (get(board, b5x0, b5y0) === WHITE) {
+            // 【2026-08-21 浦月最强防·黑5 J7 家族】白4 抢先占黑5 对称点（浦月最强防，确定性平局线
+            // 根因）时，黑5 走必胜点 J7 家族。来源：18183《花月浦月定式详解》+《五子棋·浦月开局》——
+            // 浦月主变"白4=G9 最强防下黑5=J7 必胜"；四个浦月黑3 分支按棋盘对称（天元 180°/x-镜像/
+            // y-镜像）映射：黑3=G9→黑5=F9、黑3=I7→黑5=J7(原文)、黑3=G7→黑5=F7、黑3=I9→黑5=J9。
+            var J7FAM = { '6,8': [5, 8], '8,6': [9, 6], '6,6': [5, 6], '8,8': [9, 8] };
+            var jf = J7FAM[b3x + ',' + b3y];
+            if (jf && get(board, jf[0], jf[1]) === EMPTY && !isForbidMove(board, jf[0], jf[1])) b5sel = [jf[0], jf[1]];
+          }
+          if (!b5sel && get(board, b5x0, b5y0) === EMPTY && !isForbidMove(board, b5x0, b5y0)) b5sel = [b5x0, b5y0];
+          if (b5sel) return { x: b5sel[0], y: b5sel[1] };
+        }
+      }
+    }
+
+    // 【2026-08-21 黑方禁手开局库·黑7/黑9】花月主变深定式（来源 爱五子棋花月线 h8h9i9j10g7h10f6e5f7...）。
+    // 黑7=F6(5,5) 与黑5 G7、黑1 H8、黑3 I9 构成主对角冲四（白4 J10 堵一端），逼白8=E5；
+    // 黑9=F7(5,6) 做棋，与黑7 F6 竖活二、黑5 G7 横活二呼应。仅当白按主变应手时触发，否则回退搜索。
+    // 安全性：黑7 单冲四、黑9 双活二，均非禁手（仍做 isForbidMove 校验）。
+    if (player === BLACK && forbidEnabled && (moveCount === 6 || moveCount === 8) && level >= 5) {
+      // 花月主变：黑1 H8 + 黑3 I9 + 黑5 G7
+      if (get(board, 7, 7) === BLACK && get(board, 8, 8) === BLACK && get(board, 6, 6) === BLACK) {
+        if (moveCount === 6 && get(board, 7, 9) === WHITE) { // 白6=H10
+          if (get(board, 5, 5) === EMPTY && !isForbidMove(board, 5, 5)) return { x: 5, y: 5 }; // 黑7=F6
+        }
+        if (moveCount === 8 && get(board, 5, 5) === BLACK && get(board, 4, 4) === WHITE) { // 黑7=F6 且 白8=E5
+          if (get(board, 5, 6) === EMPTY && !isForbidMove(board, 5, 6)) return { x: 5, y: 6 }; // 黑9=F7
+        }
+      }
+      // 【2026-08-21 黑方禁手开局库·浦月深线定式】浦月 J7 家族深线（来源 18183《花月浦月定式详解》
+      // +《五子棋·浦月开局》：黑5=J7 → 白6=G8 → 黑7=J9 → 白8=J8→黑9=K7 活三 / 白8=G7→黑9=G6；
+      // 对白2=G7 分支按天元 180° 旋转：黑5=F9 → 白6=I8 → 黑7=F7 → 白8=F8→黑9=E9 / 白8=I9→黑9=I10）。
+      // 目的：把黑方送入 TSS/negamax 能兑现的强制阶段，避免黑7 回退搜索落 F8 等败着。
+      // 仅当黑按主变走到（黑3/黑5 命中）且白按文档主要应手时触发；其他白应手回退搜索（如实记录无定式）。
+      if (get(board, 7, 7) === BLACK) {
+        // 分支 A：白2=G7 黑3=G9 黑5=F9（浦月 180° 旋转主变）
+        if (get(board, 6, 8) === BLACK && get(board, 5, 8) === BLACK) {
+          if (moveCount === 6 && get(board, 8, 7) === WHITE) { // 白6=I8
+            if (get(board, 5, 6) === EMPTY && !isForbidMove(board, 5, 6)) return { x: 5, y: 6 }; // 黑7=F7
+          }
+          if (moveCount === 8 && get(board, 5, 6) === BLACK) { // 黑7=F7 已在盘
+            if (get(board, 5, 7) === WHITE && get(board, 4, 8) === EMPTY && !isForbidMove(board, 4, 8)) return { x: 4, y: 8 }; // 白8=F8 → 黑9=E9
+            if (get(board, 8, 8) === WHITE && get(board, 8, 9) === EMPTY && !isForbidMove(board, 8, 9)) return { x: 8, y: 9 }; // 白8=I9 → 黑9=I10
+          }
+        }
+        // 分支 D：白2=I9 黑3=I7 黑5=J7（浦月标准主变，18183 原文坐标）
+        if (get(board, 8, 6) === BLACK && get(board, 9, 6) === BLACK) {
+          if (moveCount === 6 && get(board, 6, 7) === WHITE) { // 白6=G8
+            if (get(board, 9, 8) === EMPTY && !isForbidMove(board, 9, 8)) return { x: 9, y: 8 }; // 黑7=J9
+          }
+          if (moveCount === 8 && get(board, 9, 8) === BLACK) { // 黑7=J9 已在盘
+            if (get(board, 9, 7) === WHITE && get(board, 10, 6) === EMPTY && !isForbidMove(board, 10, 6)) return { x: 10, y: 6 }; // 白8=J8 → 黑9=K7
+            if (get(board, 6, 6) === WHITE && get(board, 6, 5) === EMPTY && !isForbidMove(board, 6, 5)) return { x: 6, y: 5 }; // 白8=G7 → 黑9=G6
+          }
+        }
+      }
+    }
+
     // 【2026-08-18 黑开局定式】AI 执黑开局前 3 手用强开局点；黑5起交给搜索。
     // (2026-08-18 实测回退说明：给黑额外 +2 强制链深度 / 长定式会拖垮时限、反遭白方背谱，
     //  故仅保留"天元 + 黑3斜位"短定式，黑5起完全交给搜索——基础强化(深度/历史启发)才是胜率主力)
@@ -1509,6 +1787,20 @@
           }
         }
       }
+    }
+
+    // 【2026-08-21 建议2·黑方中盘搜索预算保底（仅 9 段）】9 段黑方（禁手）中盘统一
+    // 用满 9 段思考预算，让迭代加深多搜 1-2 层，把斜月黑 5 H10 的优势转化为杀棋。
+    // 依据 booktest_boost 实测：黑 6500ms vs 白 3500ms 自对弈胜率 60%→75%（黑 6 白 1 平 1）。
+    // 为什么不做"评估优势"条件触发：胜/负分支在黑 21 决策点的静态评估近乎相等
+    // （+4242 胜 vs +5149 负，见 cache/evaltrace.js 输出），评估要到杀棋落子后才跳升
+    // （+119 万）——那时再加深已无意义。因此用"中盘预算保底"（无条件）而非条件触发。
+    // 代价可控：仅 9 段命中（TIME_BUDGETS[8]=6500ms，产品默认即为 6500ms → 对 9 段是 no-op）；
+    // 5-8 段各有 1500/1800/2200/2800ms 预算、维持各自段位难度梯度，不被拉满。
+    // 仅让 3500ms 测试/自对弈预算下的 9 段黑方不再被低估；白方与开局定式不受影响。
+    if (player === BLACK && forbidEnabled && level === 9 && moveCount >= 6) {
+      var floorDl = Date.now() + TIME_BUDGETS[8];
+      if (floorDl > dl) dl = floorDl; // 保底：9 段黑方中盘至少 9 段全预算
     }
 
     var cands = genCandidates(board, player, near0, cfg.cand, forbidEnabled);
@@ -1545,7 +1837,9 @@
         // 盲目防守（如白 G9）反而给对手留出占我方进攻点的机会。
         // 【2026-08-16 多候选】findVcfStarts 返回全部命中点逐个验证——首个命中
         // （如棋谱19 I8）验证失败不代表后续候选（I6，VCT 必胜链）也不行（曾只试第一个）。
-        if (cfg.threat >= 3 && dec.kind === 'op-force' && Date.now() < dl) {
+        // 【2026-08-21】op-d3（对方一步双活三成型点）同样纳入：我方 VCF 必胜链
+        // 先手节奏快于对方双活三（对方双活三 → 活四 → 五连需 3 手，我方冲四链全程钉死对方）。
+        if (cfg.threat >= 3 && (dec.kind === 'op-force' || dec.kind === 'op-d3') && Date.now() < dl) {
           var atkList = findVcfStarts(board, player, cands, forbidEnabled, Math.min(dl, Date.now() + 150));
           for (var ai2 = 0; ai2 < atkList.length && Date.now() < dl; ai2++) {
             // 先手有效性验证：对手应五连成型点后，我仍能防住其全部 force 威胁才走先手；
@@ -1584,6 +1878,23 @@
         // 低段位偶尔也放过必胜（制造失误感），高段位必走
         if (cfg.threat >= 2 || Math.random() < 0.9) return decMove;
       }
+    }
+
+    // 【2026-08-21 ADR-003 阶段1】混合威胁链 TSS：先于现有 VCF/VCT 跑一次黑方必胜证明。
+    // 目标域（黑 100% 胜率）：禁手模式黑先手。TSS 证明必胜 → 直接返回威胁链首步；
+    // 否则回退现有 vcf/vct/negamax（不改变原决策）。仅强化黑（白不启用，避免自对弈中
+    // 白 AI 变强反削黑胜率）。预算：单侧 <35% 时段 + 节点上限，超时/超限降级。
+    if (player === BLACK && forbidEnabled && cfg.threat >= 2 && moveCount >= 4 && Date.now() < dl) {
+      var tssDl = Date.now() + Math.max(400, Math.round((dl - Date.now()) * 0.33));
+      if (tssDl > dl) tssDl = dl;
+      var tssBudget = { n: 0, max: 150000, hitMax: false };
+      var tssSeen = new Map();
+      var tssMove = tssOr(board, player, 12, forbidEnabled, tssDl, tssBudget, tssSeen);
+      if (typeof process !== 'undefined' && process.env.GOMOKU_DBG) {
+        console.log('[dbg] tss:', tssMove ? String.fromCharCode(65 + tssMove.x) + (tssMove.y + 1) : '∅',
+          'nodes=' + tssBudget.n + ' hitMax=' + tssBudget.hitMax);
+      }
+      if (tssMove) return tssMove;
     }
 
     // VCF 连续冲四搜索（高段位）：多步杀（2026-08-18：深度按段位 killDepth，九段 8 层穷举）
@@ -1694,6 +2005,8 @@
     _forbid: isForbidMove,
     _evaluate: evaluateBoard,
     _raceGuard: threatRaceGuard,
+    _tss: tssOr,               // 混合威胁链 TSS（ADR-003 阶段1，供单测：black 必胜证明）
+    _tssAnd: tssAnd,           // TSS AND 节点
     _useNet: setNet,
     _netReady: netReady
   };

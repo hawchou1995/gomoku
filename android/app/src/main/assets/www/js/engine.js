@@ -19,6 +19,37 @@
 
   var DIRS = [[1, 0], [0, 1], [1, 1], [1, -1]];
 
+  /**
+   * 单方向形状分析（含跳形）——与 ai.js shapeInfo 语义严格一致，
+   * 保证引擎禁手判定与 AI 威胁认知（classifyPoint）对齐。
+   * 返回 { count, jumpL, jumpR, openL, openR, jumpOpenL, jumpOpenR }
+   *   count: 连续段长（含落点）
+   *   jumpL/jumpR: 连续段外侧隔一空后的跳段子数（左/右）
+   *   openL/openR: 连续段两端是否开放（紧邻为空）
+   *   jumpOpenL/jumpOpenR: 跳段外端是否开放
+   */
+  function lineShape(board, x, y, player, dx, dy) {
+    var count = 1;
+    var openL = 0, openR = 0, jumpL = 0, jumpR = 0, jumpOpenL = 0, jumpOpenR = 0;
+    var nx = x + dx, ny = y + dy;
+    while (inB(nx, ny) && get(board, nx, ny) === player) { count++; nx += dx; ny += dy; }
+    if (inB(nx, ny) && get(board, nx, ny) === EMPTY) {
+      openR = 1;
+      var gx = nx + dx, gy = ny + dy;
+      while (inB(gx, gy) && get(board, gx, gy) === player) { jumpR++; gx += dx; gy += dy; }
+      if (inB(gx, gy) && get(board, gx, gy) === EMPTY) jumpOpenR = 1;
+    }
+    nx = x - dx; ny = y - dy;
+    while (inB(nx, ny) && get(board, nx, ny) === player) { count++; nx -= dx; ny -= dy; }
+    if (inB(nx, ny) && get(board, nx, ny) === EMPTY) {
+      openL = 1;
+      gx = nx - dx; gy = ny - dy;
+      while (inB(gx, gy) && get(board, gx, gy) === player) { jumpL++; gx -= dx; gy -= dy; }
+      if (inB(gx, gy) && get(board, gx, gy) === EMPTY) jumpOpenL = 1;
+    }
+    return { count: count, jumpL: jumpL, jumpR: jumpR, openL: openL, openR: openR, jumpOpenL: jumpOpenL, jumpOpenR: jumpOpenR };
+  }
+
   function createBoard() { return new Uint8Array(SIZE * SIZE); }
 
   /**
@@ -68,8 +99,12 @@
 
   /**
    * 检查黑棋在 (x,y) 是否构成禁手。
-   * 禁手规则：三三、四四、长连（≥6子）。
-   * 返回 null（无禁手）或禁手类型字符串。
+   * 禁手规则（与 RIF/标准禁手对齐，语义与 ai.js classifyPoint 一致）：
+   *   - 三三：≥2 个活三（含跳活三：X_XX / XX_X，补 gap 后须成活四，即双端开放）
+   *   - 四四：≥2 个活四/冲四（含跳四：补 gap 即成五连）
+   *   - 长连：≥6 子连珠
+   *   - 黑五连（恰好 5 子）不算禁手，且五连优先于三三/四四
+   * 返回 null（无禁手）或禁手类型字符串（'长连' / '三三' / '四四' 或其组合）。
    */
   Game.prototype.checkForbid = function (x, y) {
     if (!this.forbidEnabled) return null;
@@ -80,38 +115,48 @@
     set(this.board, x, y, BLACK);
     var result = null;
 
-    // 检查长连（≥6 子连珠，不计五连）
-    var longCount = 0;
+    var live3 = 0, four = 0;   // four = 活四 + 冲四
+    var overline = false, five = false;
     for (var d = 0; d < 4; d++) {
       var dx = DIRS[d][0], dy = DIRS[d][1];
-      var count = 1;
-      var nx = x + dx, ny = y + dy;
-      while (inB(nx, ny) && get(this.board, nx, ny) === BLACK) { count++; nx += dx; ny += dy; }
-      nx = x - dx; ny = y - dy;
-      while (inB(nx, ny) && get(this.board, nx, ny) === BLACK) { count++; nx -= dx; ny -= dy; }
-      if (count >= 6) longCount++;
+      var s = lineShape(this.board, x, y, BLACK, dx, dy);
+      if (s.count >= 6) { overline = true; continue; }      // 长连
+      if (s.count === 5) { five = true; continue; }         // 恰五连：黑胜优先，不判禁手
+      var jumpTotal = s.jumpL + s.jumpR;
+      var total = s.count + jumpTotal;
+      if (s.count === 4) {
+        // 连续四连：双端开=活四；单端开=冲四；双端堵=死四（无威胁，不计）
+        var openCnt4 = (s.openL ? 1 : 0) + (s.openR ? 1 : 0);
+        if (openCnt4 >= 2) four++;
+        else if (openCnt4 === 1) four++;
+        continue;
+      }
+      // 两端开放度：跳侧取跳段外开放端，非跳侧取紧邻开放端（与 classifyPoint 同式）
+      var open = 0;
+      if (s.jumpL > 0) { if (s.jumpOpenL) open++; }
+      else if (s.openL) open++;
+      if (s.jumpR > 0) { if (s.jumpOpenR) open++; }
+      else if (s.openR) open++;
+      if (jumpTotal > 0) {
+        // 跳形：total≥4 → 补 gap 成五 → 冲四级；total=3 且双端开放 → 活三
+        if (total >= 4) four++;
+        else if (total === 3 && open === 2) live3++;
+      } else {
+        // 纯连续段
+        if (total === 4) { if (open >= 2) four++; else if (open === 1) four++; }
+        else if (total === 3 && open === 2) live3++;
+      }
     }
-    if (longCount > 0) { result = '长连'; }
 
-    // 检查三三 / 四四
-    var live3 = 0, live4 = 0;
-    for (d = 0; d < 4; d++) {
-      dx = DIRS[d][0]; dy = DIRS[d][1];
-      // 数连子
-      count = 1; var open = 0;
-      nx = x + dx; ny = y + dy;
-      while (inB(nx, ny) && get(this.board, nx, ny) === BLACK) { count++; nx += dx; ny += dy; }
-      if (inB(nx, ny) && get(this.board, nx, ny) === EMPTY) open++;
-      nx = x - dx; ny = y - dy;
-      while (inB(nx, ny) && get(this.board, nx, ny) === BLACK) { count++; nx -= dx; ny -= dy; }
-      if (inB(nx, ny) && get(this.board, nx, ny) === EMPTY) open++;
-      if (count === 4 && open === 2) live4++;
-      if (count === 3 && open === 2) live3++;
-      // 冲四也算
-      if (count === 4 && open === 1) live4++;
+    if (overline) {
+      result = '长连';
+    } else if (five) {
+      // 恰五连：黑胜优先，不构成禁手
+      set(this.board, x, y, EMPTY);
+      return null;
     }
     if (live3 >= 2) result = result ? result + '+三三' : '三三';
-    if (live4 >= 2) result = result ? result + '+四四' : '四四';
+    if (four >= 2) result = result ? result + '+四四' : '四四';
 
     // 回滚
     set(this.board, x, y, EMPTY);

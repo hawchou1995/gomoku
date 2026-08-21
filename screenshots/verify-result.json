@@ -1,0 +1,290 @@
+[
+  {
+    "vp": "portrait-390x844",
+    "expect": {
+      "padTop": 118,
+      "players": "visible"
+    },
+    "measured": {
+      "vw": 390,
+      "vh": 844,
+      "immersive": true,
+      "hudHidden": false,
+      "hudJustifyContent": "flex-start",
+      "hudBottomMarginTop": "692.5px",
+      "playersDisplay": "flex",
+      "playersMarginTop": "10px",
+      "scrollPaddingTop": "118px",
+      "scrollPaddingBottom": "82px",
+      "hudTopRect": {
+        "top": 12,
+        "bottom": 53,
+        "left": 10,
+        "right": 380,
+        "width": 370,
+        "height": 41,
+        "cy": 32.5
+      },
+      "playersRect": {
+        "top": 63,
+        "bottom": 94.5,
+        "left": 10,
+        "right": 380,
+        "width": 370,
+        "height": 31.5,
+        "cy": 78.8
+      },
+      "hudBottomRect": {
+        "top": 787,
+        "bottom": 832,
+        "left": 10,
+        "right": 380,
+        "width": 370,
+        "height": 45,
+        "cy": 809.5
+      },
+      "boardWrapRect": {
+        "top": 257,
+        "bottom": 623,
+        "left": 12,
+        "right": 378,
+        "width": 366,
+        "height": 366,
+        "cy": 440
+      },
+      "playersCenterOffsetFromVpCenter": -343.2,
+      "playersVsBoardOverlapX": 366,
+      "playersVsBoardOverlapY": 0,
+      "boardVsPlayersVerticalGap": -162.5,
+      "boardSize": {
+        "w": 366,
+        "h": 366
+      }
+    },
+    "pass": {
+      "padTop": true,
+      "playersDisplay": true,
+      "hudNotCentered": true,
+      "noOverlap": true,
+      "hudBottomPushed": true
+    },
+    "errors": [],
+    "screenshot": "C:\\Users\\XAUTHUB\\WorkBuddy\\开发\\gomoku\\screenshots\\verify-portrait-390x844.png"
+  },
+  {
+    "vp": "portrait-768x1024",
+    "expect": {
+      "padTop": 126,
+      "players": "visible"
+    },
+    "measured": {
+      "vw": 768,
+      "vh": 1024,
+      "immersive": true,
+      "hudHidden": false,
+      "hudJustifyContent": "flex-start",
+      "hudBottomMarginTop": "870.5px",
+      "playersDisplay": "flex",
+      "playersMarginTop": "10px",
+      "scrollPaddingTop": "126px",
+      "scrollPaddingBottom": "92px",
+      "hudTopRect": {
+        "top": 12,
+        "bottom": 53,
+        "left": 14,
+        "right": 754,
+        "width": 740,
+        "height": 41,
+        "cy": 32.5
+      },
+      "playersRect": {
+        "top": 63,
+        "bottom": 96.5,
+        "left": 14,
+        "right": 754,
+        "width": 740,
+        "height": 33.5,
+        "cy": 79.8
+      },
+      "hudBottomRect": {
+        "top": 967,
+        "bottom": 1012,
+        "left": 14,
+        "right": 754,
+        "width": 740,
+        "height": 45,
+        "cy": 989.5
+      },
+      "boardWrapRect": {
+        "top": 157,
+        "bottom": 901,
+        "left": 12,
+        "right": 756,
+        "width": 744,
+        "height": 744,
+        "cy": 529
+      },
+      "playersCenterOffsetFromVpCenter": -432.2,
+      "playersVsBoardOverlapX": 740,
+      "playersVsBoardOverlapY": 0,
+      "boardVsPlayersVerticalGap": -60.5,
+      "boardSize": {
+        "w": 744,
+        "h": 744
+      }
+    },
+    "pass": {
+      "padTop": true,
+      "playersDisplay": true,
+      "hudNotCentered": true,
+      "noOverlap": true,
+      "hudBottomPushed": true
+    },
+    "errors": [],
+    "screenshot": "C:\\Users\\XAUTHUB\\WorkBuddy\\开发\\gomoku\\screenshots\\verify-portrait-768x1024.png"
+  },
+  {
+    "vp": "landscape-844x390",
+    "expect": {
+      "padTop": 62,
+      "players": "hidden"
+    },
+    "measured": {
+      "vw": 844,
+      "vh": 390,
+      "immersive": true,
+      "hudHidden": false,
+      "hudJustifyContent": "flex-start",
+      "hudBottomMarginTop": "293.5px",
+      "playersDisplay": "none",
+      "playersMarginTop": "10px",
+      "scrollPaddingTop": "62px",
+      "scrollPaddingBottom": "66px",
+      "hudTopRect": {
+        "top": 12,
+        "bottom": 47.5,
+        "left": 14,
+        "right": 830,
+        "width": 816,
+        "height": 35.5,
+        "cy": 29.8
+      },
+      "playersRect": {
+        "top": 0,
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "width": 0,
+        "height": 0,
+        "cy": 0
+      },
+      "hudBottomRect": {
+        "top": 341,
+        "bottom": 378,
+        "left": 14,
+        "right": 830,
+        "width": 816,
+        "height": 37,
+        "cy": 359.5
+      },
+      "boardWrapRect": {
+        "top": 62,
+        "bottom": 324,
+        "left": 291,
+        "right": 553,
+        "width": 262,
+        "height": 262,
+        "cy": 193
+      },
+      "playersCenterOffsetFromVpCenter": -195,
+      "playersVsBoardOverlapX": 0,
+      "playersVsBoardOverlapY": 0,
+      "boardVsPlayersVerticalGap": -62,
+      "boardSize": {
+        "w": 262,
+        "h": 262
+      }
+    },
+    "pass": {
+      "padTop": true,
+      "playersDisplay": false,
+      "hudNotCentered": true,
+      "noOverlap": true,
+      "hudBottomPushed": true
+    },
+    "errors": [],
+    "screenshot": "C:\\Users\\XAUTHUB\\WorkBuddy\\开发\\gomoku\\screenshots\\verify-landscape-844x390.png"
+  },
+  {
+    "vp": "landscape-1024x768",
+    "expect": {
+      "padTop": 126,
+      "players": "visible"
+    },
+    "measured": {
+      "vw": 1024,
+      "vh": 768,
+      "immersive": true,
+      "hudHidden": false,
+      "hudJustifyContent": "flex-start",
+      "hudBottomMarginTop": "614.5px",
+      "playersDisplay": "flex",
+      "playersMarginTop": "10px",
+      "scrollPaddingTop": "126px",
+      "scrollPaddingBottom": "92px",
+      "hudTopRect": {
+        "top": 12,
+        "bottom": 53,
+        "left": 14,
+        "right": 1010,
+        "width": 996,
+        "height": 41,
+        "cy": 32.5
+      },
+      "playersRect": {
+        "top": 63,
+        "bottom": 96.5,
+        "left": 14,
+        "right": 1010,
+        "width": 996,
+        "height": 33.5,
+        "cy": 79.8
+      },
+      "hudBottomRect": {
+        "top": 711,
+        "bottom": 756,
+        "left": 14,
+        "right": 1010,
+        "width": 996,
+        "height": 45,
+        "cy": 733.5
+      },
+      "boardWrapRect": {
+        "top": 126,
+        "bottom": 676,
+        "left": 237,
+        "right": 787,
+        "width": 550,
+        "height": 550,
+        "cy": 401
+      },
+      "playersCenterOffsetFromVpCenter": -304.2,
+      "playersVsBoardOverlapX": 550,
+      "playersVsBoardOverlapY": 0,
+      "boardVsPlayersVerticalGap": -29.5,
+      "boardSize": {
+        "w": 550,
+        "h": 550
+      }
+    },
+    "pass": {
+      "padTop": true,
+      "playersDisplay": true,
+      "hudNotCentered": true,
+      "noOverlap": true,
+      "hudBottomPushed": true
+    },
+    "errors": [],
+    "screenshot": "C:\\Users\\XAUTHUB\\WorkBuddy\\开发\\gomoku\\screenshots\\verify-landscape-1024x768.png"
+  }
+]

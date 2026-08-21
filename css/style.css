@@ -911,7 +911,7 @@ body.immersive #view-game .board-scroll {
   display: flex;
   overflow: auto;
   overscroll-behavior: none;
-  padding-top: calc(env(safe-area-inset-top, 0px) + 86px);
+  padding-top: calc(env(safe-area-inset-top, 0px) + 126px); /* 预留：顶部条 40 + 读秒横幅 40（含 10 间距）+ 原 86 余量 */
   padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 92px);
   padding-left: 12px;
   padding-right: 12px;
@@ -941,7 +941,7 @@ body.immersive #view-game .side-panel { display: none !important; }
   pointer-events: none;            /* 容器不拦截点击，仅按钮/状态胶囊可交互 */
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start; /* 顶部条 + 读秒横幅靠顶排布（读秒横幅不再被 space-between 推到屏幕中央）；底部条用 margin-top:auto 推到最底 */
   padding: calc(env(safe-area-inset-top, 0px) + 12px) 14px calc(env(safe-area-inset-bottom, 0px) + 12px);
 }
 /* 仅可交互元素拦截点击；hud-top/hud-players/hud-bottom 整行点击穿透，
@@ -999,12 +999,13 @@ body.immersive #view-game .side-panel { display: none !important; }
 .hud-icon-btn:hover { background: rgba(29, 33, 43, 0.85); }
 .hud-icon-btn:active { transform: scale(0.92); }
 
-/* 玩家条：黑 VS 白 */
+/* 玩家条：黑 VS 白（读秒横幅固定为顶部状态条下方第二行，不再遮挡棋盘中央） */
 .hud-players {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
+  margin-top: 10px; /* 与顶部条保持间距 */
 }
 .hud-player {
   display: flex;
@@ -1050,6 +1051,7 @@ body.immersive #view-game .side-panel { display: none !important; }
 
 /* 底部操作条 */
 .hud-bottom {
+  margin-top: auto; /* flex-start 布局下仍将底部操作条推到底部，等效于原 space-between 效果 */
   display: flex;
   gap: 10px;
   justify-content: center;
@@ -1079,7 +1081,7 @@ body.immersive #view-game .side-panel { display: none !important; }
 /* 竖屏极窄设备：玩家条上下并排，压缩顶部占位 */
 @media (max-width: 480px) {
   body.immersive #view-game .board-scroll {
-    padding-top: calc(env(safe-area-inset-top, 0px) + 78px);
+    padding-top: calc(env(safe-area-inset-top, 0px) + 118px);
     padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 82px);
   }
   .hud { padding-left: 10px; padding-right: 10px; }
