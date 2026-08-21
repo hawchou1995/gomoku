@@ -1507,6 +1507,27 @@
     // 位置必须在"开局贴边应对"之前——否则 moveCount≤2 时对称点先命中，定式永远走不到。
     var moveCount = 0, i, j;
     for (i = 0; i < SIZE; i++) for (j = 0; j < SIZE; j++) if (get(board, i, j) !== EMPTY) moveCount++;
+    // 【2026-08-21 黑方禁手开局库】禁手开启时黑 1 天元（near0 已处理）+ 黑 3 斜月位 I9(8,8)。
+    // 依据 booktest 实验（斜月 H8→I9，黑 2 胜 1 负 vs 自由开局 0 胜 2 平 1 负）——
+    // 黑 3 下天元斜邻位形成活二 + 双向发展空间，规避禁手风险且优于自由发挥；
+    // 黑 5 起完全交给搜索（2026-08-18 教训：长定式拖垮时限反遭白方背谱）。
+    // 安全性：黑 3 为黑方第 2 子（仅两子斜连，不构成三/四/长连），任何落点均非禁手点。
+    if (player === BLACK && forbidEnabled && moveCount <= 3 && level >= 5) {
+      var bkStones = 0;
+      for (i = 0; i < SIZE; i++) for (j = 0; j < SIZE; j++) if (get(board, i, j) === BLACK) bkStones++;
+      if (bkStones === 1 && get(board, 7, 7) === BLACK) {
+        // 黑3 斜月位：天元右上斜邻 (8,8)；被白占则就近斜位（均不构成禁手）
+        var BOOK_BLACK = [[8, 8], [7, 8], [8, 7], [6, 6], [8, 6], [6, 8], [6, 7], [7, 6]];
+        for (var bb = 0; bb < BOOK_BLACK.length; bb++) {
+          var bx = BOOK_BLACK[bb][0], by = BOOK_BLACK[bb][1];
+          if (get(board, bx, by) !== EMPTY) continue;
+          if (bx !== 7 && by !== 7) return { x: bx, y: by }; // 斜位优先
+        }
+        if (get(board, 7, 8) === EMPTY) return { x: 7, y: 8 };
+        if (get(board, 8, 7) === EMPTY) return { x: 8, y: 7 };
+      }
+    }
+
     // 【2026-08-18 黑开局定式】AI 执黑开局前 3 手用强开局点；黑5起交给搜索。
     // (2026-08-18 实测回退说明：给黑额外 +2 强制链深度 / 长定式会拖垮时限、反遭白方背谱，
     //  故仅保留"天元 + 黑3斜位"短定式，黑5起完全交给搜索——基础强化(深度/历史启发)才是胜率主力)
