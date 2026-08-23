@@ -1,6 +1,0 @@
-PASS  320×568 home scrollH==clientH  [512/512]
-PASS  320×568 4 cards in view + buttons visible  [[{"top":128,"bottom":320,"btnsOk":true},{"top":128,"bottom":320,"btnsOk":true},{"top":330,"bottom":522,"btnsOk":true},{"top":330,"bottom":522,"btnsOk":true}]]
-PASS  320×568 no h overflow  [320≤320]
-PASS  LAN mode --v128-dock-h cleared  [dockH=0 padB=64 overlay=false display=none]
-PASS  drawer open above dock  [spZ=56 dockZ=54]
-probe extra: ALL PASS
