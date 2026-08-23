@@ -1,0 +1,163 @@
+{
+  "generatedAt": "2026-08-23T03:06:26.342Z",
+  "total": 31,
+  "passed": 31,
+  "failed": 0,
+  "results": [
+    {
+      "ok": true,
+      "name": "A1 #view-home touch-action 为 none",
+      "detail": "none"
+    },
+    {
+      "ok": true,
+      "name": "A2 #view-home overscroll-behavior-y 为 none",
+      "detail": "none"
+    },
+    {
+      "ok": true,
+      "name": "A3 #view-home 已绑定 lockHomeScroll（dataset.lockHome=1）",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "A4 #view-home touchmove 已被 preventDefault（无冒泡滚动）",
+      "detail": "constructed=true defaultPrevented=true"
+    },
+    {
+      "ok": true,
+      "name": "A5 大厅 touch 拖动 120px 后 scrollY/scrollTop 恒 0",
+      "detail": "scrollY=0 home.scrollTop=0"
+    },
+    {
+      "ok": true,
+      "name": "A6 大厅无横向溢出",
+      "detail": "412≤412"
+    },
+    {
+      "ok": true,
+      "name": "C1 竖屏沉浸 棋盘宽 = 412",
+      "detail": "{\"x\":0,\"y\":256,\"w\":412,\"h\":412}"
+    },
+    {
+      "ok": true,
+      "name": "C2 竖屏沉浸 棋盘于顶条(72)/底条(64)之间垂直居中（Δ≤2）",
+      "detail": "topBarGap=184.0 bottomBarGap=183.0 Δ=1.0 | 视口 top=256 bottom=248"
+    },
+    {
+      "ok": true,
+      "name": "C3 竖屏沉浸 棋盘水平铺满（左右 gap=0）",
+      "detail": "left=0 right=0"
+    },
+    {
+      "ok": true,
+      "name": "C4 沉浸 padding = 72/64（safe-area=0 不重复计入、dock 净空已移除）",
+      "detail": "padT=72 padB=64"
+    },
+    {
+      "ok": true,
+      "name": "C5 竖屏沉浸 零滚动（无横向溢出）",
+      "detail": "412≤412 scrollY=0"
+    },
+    {
+      "ok": true,
+      "name": "C6 竖屏沉浸 棋盘 touch 拖动 100px 后页面零滚动",
+      "detail": "scrollY=0"
+    },
+    {
+      "ok": true,
+      "name": "B1 桌面非沉浸 棋盘宽 = 764（480→764）",
+      "detail": "{\"x\":338,\"y\":72,\"w\":764,\"h\":764}"
+    },
+    {
+      "ok": true,
+      "name": "B2 桌面非沉浸 棋盘水平居中",
+      "detail": "left=338 right=338"
+    },
+    {
+      "ok": true,
+      "name": "B3 .game-layout max-width 已解除（none）",
+      "detail": "none"
+    },
+    {
+      "ok": true,
+      "name": "B4 .game-layout 铺满视口宽",
+      "detail": "w=1440"
+    },
+    {
+      "ok": true,
+      "name": "B5 桌面非沉浸 无横向溢出",
+      "detail": "1440≤1440"
+    },
+    {
+      "ok": true,
+      "name": "D1 桌面沉浸 棋盘宽 = 764",
+      "detail": "{\"x\":338,\"y\":72,\"w\":764,\"h\":764}"
+    },
+    {
+      "ok": true,
+      "name": "D2 桌面沉浸 棋盘水平居中",
+      "detail": "left=338 right=338"
+    },
+    {
+      "ok": true,
+      "name": "D3 桌面沉浸 棋盘于 72..836 之间垂直居中（Δ≤2）",
+      "detail": "topBarGap=0.0 bottomBarGap=0.0"
+    },
+    {
+      "ok": true,
+      "name": "D4 桌面沉浸 零滚动",
+      "detail": "1440≤1440"
+    },
+    {
+      "ok": true,
+      "name": "E1 横屏非沉浸 棋盘宽 = 304（min(宽,高) 高度受限属正常）",
+      "detail": "{\"x\":306,\"y\":54,\"w\":304,\"h\":304}"
+    },
+    {
+      "ok": true,
+      "name": "E2 横屏非沉浸 水平居中",
+      "detail": "left=306 right=306"
+    },
+    {
+      "ok": true,
+      "name": "E3 横屏非沉浸 零滚动",
+      "detail": "915≤915"
+    },
+    {
+      "ok": true,
+      "name": "G1 进对局未开局：状态=等待开局…",
+      "detail": "等待开局…"
+    },
+    {
+      "ok": true,
+      "name": "G2 开局后玩家先手：状态=轮到你",
+      "detail": "轮到你"
+    },
+    {
+      "ok": true,
+      "name": "G3 开局后棋盘 412 宽（沉浸）",
+      "detail": "{\"x\":0,\"y\":256,\"w\":412,\"h\":412}"
+    },
+    {
+      "ok": true,
+      "name": "G4 落子被接受：状态进入 AI 思考",
+      "detail": "AI 思考中…"
+    },
+    {
+      "ok": true,
+      "name": "G5 落子像素验证：天元格出现黑子（亮度=27）",
+      "detail": "{\"r\":24,\"g\":27,\"b\":31}"
+    },
+    {
+      "ok": true,
+      "name": "G6 对局中零滚动",
+      "detail": "scrollY=0"
+    },
+    {
+      "ok": true,
+      "name": "H 全程无 pageerror / console.error",
+      "detail": ""
+    }
+  ]
+}

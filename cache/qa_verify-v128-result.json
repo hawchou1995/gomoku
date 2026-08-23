@@ -1,0 +1,574 @@
+{
+  "generatedAt": "2026-08-23T04:13:05.105Z",
+  "total": 113,
+  "passed": 109,
+  "failed": 4,
+  "allPageErrors": [],
+  "results": [
+    {
+      "ok": true,
+      "name": "A[412×915] #view-home 无垂直内部滚动",
+      "detail": "scrollH=859 clientH=859"
+    },
+    {
+      "ok": true,
+      "name": "A[412×915] #view-home 无水平内部滚动",
+      "detail": "scrollW=412 clientW=412"
+    },
+    {
+      "ok": true,
+      "name": "A[412×915] 4 张模式卡存在",
+      "detail": "count=4"
+    },
+    {
+      "ok": true,
+      "name": "A[412×915] hero 标题存在",
+      "detail": "五子棋"
+    },
+    {
+      "ok": true,
+      "name": "A[412×915] 副标题存在",
+      "detail": "15×15 棋盘…"
+    },
+    {
+      "ok": true,
+      "name": "A[412×915] 4 卡全部在视口内",
+      "detail": "[[129,502],[129,502],[512,884],[512,884]]"
+    },
+    {
+      "ok": true,
+      "name": "A[412×915] 卡片两两不重叠",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "A[412×915] 每卡按钮可见",
+      "detail": "[1,1,2,2]"
+    },
+    {
+      "ok": true,
+      "name": "A[412×915] 文档无横向溢出",
+      "detail": "412≤412"
+    },
+    {
+      "ok": true,
+      "name": "A[412×915] lockHomeScroll 已绑定(dataset.lockHome=1)",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "A[412×915] touch 下拉 120px 后 scrollY=0",
+      "detail": "scrollY=0"
+    },
+    {
+      "ok": true,
+      "name": "A[360×640] #view-home 无垂直内部滚动",
+      "detail": "scrollH=584 clientH=584"
+    },
+    {
+      "ok": true,
+      "name": "A[360×640] #view-home 无水平内部滚动",
+      "detail": "scrollW=360 clientW=360"
+    },
+    {
+      "ok": true,
+      "name": "A[360×640] 4 张模式卡存在",
+      "detail": "count=4"
+    },
+    {
+      "ok": true,
+      "name": "A[360×640] hero 标题存在",
+      "detail": "五子棋"
+    },
+    {
+      "ok": true,
+      "name": "A[360×640] 副标题存在",
+      "detail": "15×15 棋盘…"
+    },
+    {
+      "ok": true,
+      "name": "A[360×640] 4 卡全部在视口内",
+      "detail": "[[128,356],[128,356],[366,594],[366,594]]"
+    },
+    {
+      "ok": true,
+      "name": "A[360×640] 卡片两两不重叠",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "A[360×640] 每卡按钮可见",
+      "detail": "[1,1,2,2]"
+    },
+    {
+      "ok": true,
+      "name": "A[360×640] 文档无横向溢出",
+      "detail": "360≤360"
+    },
+    {
+      "ok": true,
+      "name": "A[360×640] lockHomeScroll 已绑定(dataset.lockHome=1)",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "A[360×640] touch 下拉 120px 后 scrollY=0",
+      "detail": "scrollY=0"
+    },
+    {
+      "ok": true,
+      "name": "A[412×568极矮] #view-home 无垂直内部滚动",
+      "detail": "scrollH=512 clientH=512"
+    },
+    {
+      "ok": true,
+      "name": "A[412×568极矮] #view-home 无水平内部滚动",
+      "detail": "scrollW=412 clientW=412"
+    },
+    {
+      "ok": true,
+      "name": "A[412×568极矮] 4 张模式卡存在",
+      "detail": "count=4"
+    },
+    {
+      "ok": true,
+      "name": "A[412×568极矮] hero 标题存在",
+      "detail": "五子棋"
+    },
+    {
+      "ok": true,
+      "name": "A[412×568极矮] 副标题存在",
+      "detail": "15×15 棋盘…"
+    },
+    {
+      "ok": true,
+      "name": "A[412×568极矮] 4 卡全部在视口内",
+      "detail": "[[129,328],[129,328],[338,537],[338,537]]"
+    },
+    {
+      "ok": true,
+      "name": "A[412×568极矮] 卡片两两不重叠",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "A[412×568极矮] 每卡按钮可见",
+      "detail": "[1,1,2,2]"
+    },
+    {
+      "ok": true,
+      "name": "A[412×568极矮] 文档无横向溢出",
+      "detail": "412≤412"
+    },
+    {
+      "ok": true,
+      "name": "A[412×568极矮] lockHomeScroll 已绑定(dataset.lockHome=1)",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "A[412×568极矮] touch 下拉 120px 后 scrollY=0",
+      "detail": "scrollY=0"
+    },
+    {
+      "ok": true,
+      "name": "A[320×568] #view-home 无垂直内部滚动",
+      "detail": "scrollH=512 clientH=512"
+    },
+    {
+      "ok": true,
+      "name": "A[320×568] #view-home 无水平内部滚动",
+      "detail": "scrollW=320 clientW=320"
+    },
+    {
+      "ok": true,
+      "name": "A[320×568] 4 张模式卡存在",
+      "detail": "count=4"
+    },
+    {
+      "ok": true,
+      "name": "A[320×568] hero 标题存在",
+      "detail": "五子棋"
+    },
+    {
+      "ok": true,
+      "name": "A[320×568] 副标题存在",
+      "detail": "15×15 棋盘…"
+    },
+    {
+      "ok": true,
+      "name": "A[320×568] 4 卡全部在视口内",
+      "detail": "[[128,320],[128,320],[330,522],[330,522]]"
+    },
+    {
+      "ok": true,
+      "name": "A[320×568] 卡片两两不重叠",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "A[320×568] 每卡按钮可见",
+      "detail": "[1,1,2,2]"
+    },
+    {
+      "ok": true,
+      "name": "A[320×568] 文档无横向溢出",
+      "detail": "320≤320"
+    },
+    {
+      "ok": true,
+      "name": "A[320×568] lockHomeScroll 已绑定(dataset.lockHome=1)",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "A[320×568] touch 下拉 120px 后 scrollY=0",
+      "detail": "scrollY=0"
+    },
+    {
+      "ok": true,
+      "name": "A[844×390横屏] #view-home 无垂直内部滚动",
+      "detail": "scrollH=334 clientH=334"
+    },
+    {
+      "ok": true,
+      "name": "A[844×390横屏] #view-home 无水平内部滚动",
+      "detail": "scrollW=844 clientW=844"
+    },
+    {
+      "ok": true,
+      "name": "A[844×390横屏] 4 张模式卡存在",
+      "detail": "count=4"
+    },
+    {
+      "ok": true,
+      "name": "A[844×390横屏] hero 标题存在",
+      "detail": "五子棋"
+    },
+    {
+      "ok": true,
+      "name": "A[844×390横屏] 副标题存在",
+      "detail": "15×15 棋盘…"
+    },
+    {
+      "ok": true,
+      "name": "A[844×390横屏] 4 卡全部在视口内",
+      "detail": "[[111,235],[111,235],[243,368],[243,368]]"
+    },
+    {
+      "ok": true,
+      "name": "A[844×390横屏] 卡片两两不重叠",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "A[844×390横屏] 每卡按钮可见",
+      "detail": "[1,1,2,2]"
+    },
+    {
+      "ok": true,
+      "name": "A[844×390横屏] 文档无横向溢出",
+      "detail": "844≤844"
+    },
+    {
+      "ok": true,
+      "name": "A[844×390横屏] lockHomeScroll 已绑定(dataset.lockHome=1)",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "A[844×390横屏] touch 下拉 120px 后 scrollY=0",
+      "detail": "scrollY=0"
+    },
+    {
+      "ok": true,
+      "name": "412×915[dock态] #ai-setup 为覆盖层(dock-overlay)",
+      "detail": "h=266 z=54"
+    },
+    {
+      "ok": true,
+      "name": "412×915[dock态] --v128-dock-h 写入实测高",
+      "detail": "266px"
+    },
+    {
+      "ok": true,
+      "name": "412×915[dock态] board-wrap 与 canvas 矩形一致",
+      "detail": "wrap={\"x\":0,\"y\":122.5,\"w\":412,\"h\":412,\"right\":412,\"bottom\":534.5} canvas={\"x\":0,\"y\":122.5,\"w\":412,\"h\":412,\"right\":412,\"bottom\":534.5}"
+    },
+    {
+      "ok": true,
+      "name": "412×915[dock态] 棋盘占满宽度(412)",
+      "detail": "w=412"
+    },
+    {
+      "ok": true,
+      "name": "412×915[dock态] 棋盘水平居中 cx=206",
+      "detail": "x=0.0"
+    },
+    {
+      "ok": false,
+      "name": "412×915[dock态] 垂直居中于视口（用户口径）",
+      "detail": "topGap=122.5 botGap=380.5 Δ=258.0"
+    },
+    {
+      "ok": true,
+      "name": "412×915[dock态] dock 顶缘 ≥ 棋盘底缘（不遮）",
+      "detail": "boardBottom=535 dockTop=649"
+    },
+    {
+      "ok": true,
+      "name": "412×915[dock态] board-scroll 无横向滚动",
+      "detail": "412≤412"
+    },
+    {
+      "ok": true,
+      "name": "412×915[dock态] board-scroll 无垂直滚动",
+      "detail": "915≤915"
+    },
+    {
+      "ok": true,
+      "name": "412×915[dock态] doc 无横向溢出",
+      "detail": "412≤412"
+    },
+    {
+      "ok": true,
+      "name": "412×915[dock态] 拖 120px 后 scrollY/scrollTop 恒 0",
+      "detail": "scrollY=0 bsTop=0"
+    },
+    {
+      "ok": true,
+      "name": "412×915[dock态] 拖后棋盘 rect 不变",
+      "detail": "{\"x\":0,\"y\":122.5,\"w\":412,\"h\":412,\"right\":412,\"bottom\":534.5}"
+    },
+    {
+      "ok": true,
+      "name": "412×915[沉浸态] body.immersive 已置位",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "412×915[沉浸态] --v128-dock-h 保留（两态同值）",
+      "detail": "266px"
+    },
+    {
+      "ok": true,
+      "name": "412×915 两态棋盘 rect 全等（Δ=0）",
+      "detail": "dock={\"x\":0,\"y\":122.5,\"w\":412,\"h\":412,\"right\":412,\"bottom\":534.5} imm={\"x\":0,\"y\":122.5,\"w\":412,\"h\":412,\"right\":412,\"bottom\":534.5}"
+    },
+    {
+      "ok": true,
+      "name": "412×915[沉浸态] 棋盘占满宽度(412)",
+      "detail": "w=412"
+    },
+    {
+      "ok": false,
+      "name": "412×915[沉浸态] 垂直居中于视口（用户口径）",
+      "detail": "topGap=122.5 botGap=380.5 Δ=258.0"
+    },
+    {
+      "ok": true,
+      "name": "412×915[沉浸态] board-scroll 零滚动",
+      "detail": "412/915 ≤ 412/915"
+    },
+    {
+      "ok": true,
+      "name": "412×915[沉浸态] 拖 120px 后 scrollY/scrollTop 恒 0",
+      "detail": "scrollY=0 bsTop=0"
+    },
+    {
+      "ok": true,
+      "name": "360×640[dock态] #ai-setup 为覆盖层(dock-overlay)",
+      "detail": "h=260 z=54"
+    },
+    {
+      "ok": true,
+      "name": "360×640[dock态] --v128-dock-h 写入实测高",
+      "detail": "260px"
+    },
+    {
+      "ok": true,
+      "name": "360×640[dock态] board-wrap 与 canvas 矩形一致",
+      "detail": "wrap={\"x\":58,\"y\":72,\"w\":244,\"h\":244,\"right\":302,\"bottom\":316} canvas={\"x\":58,\"y\":72,\"w\":244,\"h\":244,\"right\":302,\"bottom\":316}"
+    },
+    {
+      "ok": false,
+      "name": "360×640[dock态] 垂直居中于视口（用户口径）",
+      "detail": "topGap=72.0 botGap=324.0 Δ=252.0"
+    },
+    {
+      "ok": true,
+      "name": "360×640[dock态] dock 顶缘 ≥ 棋盘底缘（不遮）",
+      "detail": "boardBottom=316 dockTop=380"
+    },
+    {
+      "ok": true,
+      "name": "360×640[dock态] board-scroll 无横向滚动",
+      "detail": "360≤360"
+    },
+    {
+      "ok": true,
+      "name": "360×640[dock态] board-scroll 无垂直滚动",
+      "detail": "640≤640"
+    },
+    {
+      "ok": true,
+      "name": "360×640[dock态] doc 无横向溢出",
+      "detail": "360≤360"
+    },
+    {
+      "ok": true,
+      "name": "360×640[dock态] 拖 120px 后 scrollY/scrollTop 恒 0",
+      "detail": "scrollY=0 bsTop=0"
+    },
+    {
+      "ok": true,
+      "name": "360×640[dock态] 拖后棋盘 rect 不变",
+      "detail": "{\"x\":58,\"y\":72,\"w\":244,\"h\":244,\"right\":302,\"bottom\":316}"
+    },
+    {
+      "ok": true,
+      "name": "360×640[沉浸态] body.immersive 已置位",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "360×640[沉浸态] --v128-dock-h 保留（两态同值）",
+      "detail": "260px"
+    },
+    {
+      "ok": true,
+      "name": "360×640 两态棋盘 rect 全等（Δ=0）",
+      "detail": "dock={\"x\":58,\"y\":72,\"w\":244,\"h\":244,\"right\":302,\"bottom\":316} imm={\"x\":58,\"y\":72,\"w\":244,\"h\":244,\"right\":302,\"bottom\":316}"
+    },
+    {
+      "ok": true,
+      "name": "360×640[沉浸态] board-scroll 零滚动",
+      "detail": "360/640 ≤ 360/640"
+    },
+    {
+      "ok": true,
+      "name": "360×640[沉浸态] 拖 120px 后 scrollY/scrollTop 恒 0",
+      "detail": "scrollY=0 bsTop=0"
+    },
+    {
+      "ok": true,
+      "name": "412×568极矮[dock态] #ai-setup 为覆盖层(dock-overlay)",
+      "detail": "h=266 z=54"
+    },
+    {
+      "ok": true,
+      "name": "412×568极矮[dock态] --v128-dock-h 写入实测高",
+      "detail": "266px"
+    },
+    {
+      "ok": true,
+      "name": "412×568极矮[dock态] board-wrap 与 canvas 矩形一致",
+      "detail": "wrap={\"x\":123,\"y\":72,\"w\":166,\"h\":166,\"right\":289,\"bottom\":238} canvas={\"x\":123,\"y\":72,\"w\":166,\"h\":166,\"right\":289,\"bottom\":238}"
+    },
+    {
+      "ok": true,
+      "name": "412×568极矮[dock态] 棋盘 ≤ 可用区无溢出",
+      "detail": "h=166 avail=166.0"
+    },
+    {
+      "ok": false,
+      "name": "412×568极矮[dock态] 垂直居中于视口（用户口径）",
+      "detail": "topGap=72.0 botGap=330.0 Δ=258.0"
+    },
+    {
+      "ok": true,
+      "name": "412×568极矮[dock态] dock 顶缘 ≥ 棋盘底缘（不遮）",
+      "detail": "boardBottom=238 dockTop=302"
+    },
+    {
+      "ok": true,
+      "name": "412×568极矮[dock态] board-scroll 无横向滚动",
+      "detail": "412≤412"
+    },
+    {
+      "ok": true,
+      "name": "412×568极矮[dock态] board-scroll 无垂直滚动",
+      "detail": "568≤568"
+    },
+    {
+      "ok": true,
+      "name": "412×568极矮[dock态] doc 无横向溢出",
+      "detail": "412≤412"
+    },
+    {
+      "ok": true,
+      "name": "412×568极矮[dock态] 拖 120px 后 scrollY/scrollTop 恒 0",
+      "detail": "scrollY=0 bsTop=0"
+    },
+    {
+      "ok": true,
+      "name": "412×568极矮[dock态] 拖后棋盘 rect 不变",
+      "detail": "{\"x\":123,\"y\":72,\"w\":166,\"h\":166,\"right\":289,\"bottom\":238}"
+    },
+    {
+      "ok": true,
+      "name": "412×568极矮[沉浸态] body.immersive 已置位",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "412×568极矮[沉浸态] --v128-dock-h 保留（两态同值）",
+      "detail": "266px"
+    },
+    {
+      "ok": true,
+      "name": "412×568极矮 两态棋盘 rect 全等（Δ=0）",
+      "detail": "dock={\"x\":123,\"y\":72,\"w\":166,\"h\":166,\"right\":289,\"bottom\":238} imm={\"x\":123,\"y\":72,\"w\":166,\"h\":166,\"right\":289,\"bottom\":238}"
+    },
+    {
+      "ok": true,
+      "name": "412×568极矮[沉浸态] board-scroll 零滚动",
+      "detail": "412/568 ≤ 412/568"
+    },
+    {
+      "ok": true,
+      "name": "412×568极矮[沉浸态] 拖 120px 后 scrollY/scrollTop 恒 0",
+      "detail": "scrollY=0 bsTop=0"
+    },
+    {
+      "ok": true,
+      "name": "E1 进对局未开局：状态=等待开局",
+      "detail": "等待开局…"
+    },
+    {
+      "ok": true,
+      "name": "E2 抽屉可打开（侧栏 open + 遮罩 show）",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "E3 侧栏 z 序盖过 dock",
+      "detail": "spZ=56 > dockZ=54"
+    },
+    {
+      "ok": true,
+      "name": "E4 开局后玩家先手：状态=轮到你",
+      "detail": "轮到你"
+    },
+    {
+      "ok": true,
+      "name": "E5 落子被接受：状态进入 AI 思考",
+      "detail": "AI 思考中…"
+    },
+    {
+      "ok": true,
+      "name": "E7 AI 回手成功（回到玩家回合/终局）",
+      "detail": "轮到你"
+    },
+    {
+      "ok": true,
+      "name": "E6 天元出现黑子（5×5 最小亮度=36）",
+      "detail": "{\"minLum\":36,\"minAt\":\"208,208\",\"cx0\":206,\"cy0\":206,\"cssW\":412,\"logicalW\":412}"
+    },
+    {
+      "ok": true,
+      "name": "F 全程无 pageerror / console.error",
+      "detail": ""
+    }
+  ]
+}

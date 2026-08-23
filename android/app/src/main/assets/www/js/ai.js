@@ -1388,6 +1388,18 @@
     var myWin = null, myForce = null, myForceRank = 0;
     var opWinPts = [], opForce = null, opForceRank = 0;
     var opForcePts = [];
+    // 【2026-08-22 候选截断漏杀修复】一步成五（win）是全盘级事实，不能受候选池
+    // 截断影响：原实现只在 cands（36 个启发高分点）内查 myWin，池外成五点被漏。
+    // 实测局4 手35：黑 C 列四连 C9 空位成五（一步即胜），但 C9 不在候选池 →
+    // myWin=null → 黑反而去堵白活四 G4；手34 白同因漏防黑 C9。这里先全盘扫近点
+    // 确认我方一步成五 / 对方单口成五，再做候选池内的必胜组合评估。
+    var nearAll = collectNear(board);
+    for (var wa = 0; wa < nearAll.length; wa++) {
+      var wx = nearAll[wa][0], wy = nearAll[wa][1];
+      if (get(board, wx, wy) !== EMPTY) continue;
+      if (meBlackForbid && isForbidMove(board, wx, wy)) continue;
+      if (classifyPoint(board, wx, wy, me).win > 0) { myWin = { x: wx, y: wy }; break; }
+    }
     // 【2026-08-21 双活三成型点】对方落某点即形成双活三（两个活三并存=无解威胁，
     // 我方一手只能堵一个活三，对方另一活三必成活四收网）——除我方有更快先手外必须占住。
     // 注意与"双活三在盘（棋谱16 白 H11 被黑 F9 链晾死）"的区别：在盘的双活三由
@@ -1395,6 +1407,7 @@
     // 无解威胁，我方当前手必须拦截（占成型点或 VCF 抢攻）。
     var opD3 = null, opD3Rank = 0, opD3Pts = [];
     // 我方落点：用 me 视角候选（cands 由调用方按 me 的启发分排序）
+    // 【2026-08-22】myWin 已全盘扫描命中则跳过池内重复查找（cands 命中同点无碍）
     for (var i = 0; i < cands.length; i++) {
       var c = cands[i];
       var ml = threatLevel(classifyPoint(board, c.x, c.y, me), meBlackForbid);
@@ -1407,14 +1420,34 @@
     // 对方落点：必须用 you 视角候选——me 视角候选会漏掉对方的关键进攻点
     //（棋谱8：C12 落黑是跳三，黑视角排前，白视角排到 30 名外 → 漏防黑杀链源头）
     var near = collectNear(board);
+    // 【2026-08-22 候选截断漏杀修复·防守侧】对方一步成五点同样全盘扫描：
+    // 手34 白视角候选（24 点）漏掉黑 C9 成五 → 白不防、黑下一手本该 C9 五连。
+    // 全盘扫 nearAll 补全；seenWin 去重（活四双口判定依赖 length 精确性）。
+    var seenWin = {};
+    for (var oa = 0; oa < nearAll.length; oa++) {
+      var ox = nearAll[oa][0], oy = nearAll[oa][1];
+      if (get(board, ox, oy) !== EMPTY) continue;
+      var ok = ox + ',' + oy;
+      if (seenWin[ok]) continue;
+      var ocAll = classifyPoint(board, ox, oy, you);
+      if (ocAll.win > 0) {
+        if (meBlackForbid && isForbidMove(board, ox, oy)) { seenWin[ok] = 1; continue; }
+        seenWin[ok] = 1;
+        opWinPts.push({ x: ox, y: oy });
+        continue;
+      }
+    }
     var youCands = genCandidates(board, you, near, 24, forbidEnabled);
     for (var j = 0; j < youCands.length; j++) {
       var c2 = youCands[j];
+      var k2 = c2.x + ',' + c2.y;
+      if (seenWin[k2]) continue; // 已全盘扫描收录的成五点不重复计数
       var ol = threatLevel(classifyPoint(board, c2.x, c2.y, you), youBlackForbid);
       if (ol.win) {
         // 收集对方全部成五点：单点=对方冲四单口；多点=对方活四双口/双冲四真双杀。
         // 若我（黑）落该点本身是禁手则无法堵，跳过。
-        if (meBlackForbid && isForbidMove(board, c2.x, c2.y)) continue;
+        if (meBlackForbid && isForbidMove(board, c2.x, c2.y)) { seenWin[k2] = 1; continue; }
+        seenWin[k2] = 1;
         opWinPts.push(c2);
         continue;
       }
@@ -1460,6 +1493,29 @@
         var multiD3 = findMultiForceDefense(board, me, opD3Pts, forbidEnabled, Date.now() + 250);
         if (multiD3) return { move: multiD3, kind: 'op-d3-multi' };
       }
+      // 【2026-08-22 占后威胁验证·不再机械短路】op-d3 只处理"占点后对方威胁全灭"
+      // 的确定性防守；若占点后对方仍残留 一步成五/活四成型/冲四成型 等成型威胁，
+      // 说明抢此点只是治标（棋谱 08-22 手35：黑抢白双活三成型点 E6，白仍 C9/D9
+      // 连续冲四压制，黑 39 起一路堵败）。此时放弃短路、交回搜索做全局权衡
+      // （搜索 depth≥4 能经 quickTactic/VCF 保住双活三防守，且可选到预防性落点）。
+      // 预算：全盘近点扫描 ≤120ms，九段占 6.5s 预算的 <2%。
+      var dlD3 = Date.now() + 120;
+      var d3ResidWin = 0, d3ResidL4 = 0, d3ResidR4 = 0;
+      for (var d3i = 0; d3i < nearAll.length && Date.now() < dlD3; d3i++) {
+        var d3x = nearAll[d3i][0], d3y = nearAll[d3i][1];
+        if (get(board, d3x, d3y) !== EMPTY) continue;
+        if (youBlackForbid && isForbidMove(board, d3x, d3y)) continue;
+        var d3c = classifyPoint(board, d3x, d3y, you);
+        if (d3c.win > 0) d3ResidWin++;
+        if (d3c.live4 > 0) d3ResidL4++;
+        if (d3c.rush4 > 0) d3ResidR4++;
+      }
+      // 占后对方仍有成五/活四成型点：该点不是"一占全灭"的确定防守 → 不短路
+      if (d3ResidWin >= 1 || d3ResidL4 >= 1) return null;
+      // 【2026-08-22 占后残留冲四网】占后对方仍有多冲四成型（≥2 个独立冲四缺口，
+      // 各配一个活二/活三底座，两步可收网）——单一抢点防不住全局，交搜索选
+      // 中间点（能同时断多条线的预防点），避免机械占点后被白连冲四链吊打。
+      if (d3ResidR4 >= 2) return null;
       return { move: opD3, kind: 'op-d3' };
     }
     return null;
@@ -2007,6 +2063,7 @@
     _raceGuard: threatRaceGuard,
     _tss: tssOr,               // 混合威胁链 TSS（ADR-003 阶段1，供单测：black 必胜证明）
     _tssAnd: tssAnd,           // TSS AND 节点
+    _vcf: vcfSearch,           // 连续冲四必胜链搜索（审计/对照导出，2026-08-22）
     _useNet: setNet,
     _netReady: netReady
   };

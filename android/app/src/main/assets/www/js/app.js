@@ -57,6 +57,11 @@
   var zoomLevel = 1;       // 棋盘缩放倍率（1 = 100%）
   var historySelected = {}; // 历史记录多选导出：{recordId: true}
 
+  // 【GOKUP-005】APK 容器检测：MainActivity 注入 UA 标记 "GomokuApp"。
+  // APK 端按 Android 官方「构建自适应游戏」理念禁用棋盘手动缩放（布局自适应
+  // 铺满即可，不提供缩放按钮/捏合/滚轮）；Web 桌面版（无标记）保留缩放。
+  var IS_APK = /GomokuApp/i.test(navigator.userAgent);
+
   // ─────────────────────────── 视图路由 ───────────────────────────
 
   function showView(name) {
@@ -148,6 +153,10 @@
   // ─────────────────────────── 棋盘渲染 ───────────────────────────
 
   function resizeBoard() {
+    // 【GOKUP-004】视图未进入对局（home/history）时不计算：隐藏态下 .board-scroll
+    // clientWidth=0，会向 .board-wrap 写入 width:0px，成为过渡动画的错误起始值
+    // （配合旧 transition:width 曾导致棋盘宽度冻结 0 → 「开始对局后棋盘没了」）。
+    if (state.view !== 'game') return;
     // 棋盘内容边长 = 滚动容器可视尺寸 × zoomLevel。
     // 普通态：仅按宽度（正方形）；沉浸态：HUD 上下占位约束高度，取宽/高较小值。
     var wrap = document.querySelector('.board-scroll');
@@ -163,6 +172,11 @@
       baseH = Math.max(120, wrap.clientHeight - padT - padB);
     }
     var applied = Math.round(Math.min(baseW, baseH) * zoomLevel);
+    if (!isFinite(applied) || applied <= 0) {
+      // 布局未就绪（全屏过渡/视图切换瞬间）：保持当前尺寸，稍后重试，绝不写 0px
+      scheduleResizeRetry();
+      return;
+    }
     var bw = document.querySelector('.board-wrap');
     if (bw) { bw.style.width = applied + 'px'; bw.style.height = applied + 'px'; }
     boardCssSize = applied;
@@ -172,8 +186,20 @@
     drawBoard();
   }
 
+  // 【GOKUP-004】尺寸未就绪时的延迟重试（去抖，200ms），覆盖全屏过渡瞬间的 0 尺寸测量
+  var _rzRetryTimer = null;
+  function scheduleResizeRetry() {
+    if (_rzRetryTimer) return;
+    _rzRetryTimer = setTimeout(function () {
+      _rzRetryTimer = null;
+      if (state.view === 'game') resizeBoard();
+    }, 200);
+  }
+
   /** 缩放棋盘（0.5~3 倍），居中显示缩放比例。 */
   function setBoardZoom(z) {
+    // 【GOKUP-005】APK 端禁用棋盘手动缩放（官方自适应理念），zoomLevel 锁定 1
+    if (IS_APK) { zoomLevel = 1; return; }
     zoomLevel = Math.max(0.5, Math.min(3, z));
     var lb = $('zoom-label');
     if (lb) lb.textContent = Math.round(zoomLevel * 100) + '%';
@@ -1524,6 +1550,7 @@
       $('modal-root').classList.add('hidden');
       startNewGame(true);
       state.aiStarted = true; // 重开沿用当前设置并保持锁定
+      setImmersive(true); // 【2026-08-22】重开进入沉浸全屏（与 beginAIGame 一致）
       // AI 先手：新局首步由 AI 落子（此前只 startNewGame 导致死局）
       if (state.playerFirst) startTicker();
       else aiFirstMove();
@@ -1537,6 +1564,7 @@
       state.aiStarted = true; // 沿用当前设置并保持锁定
       state.swapDecided = false;
       state.swapped = false;
+      setImmersive(true); // 【2026-08-22】同上
       startTicker();
       refreshUI();
       toast('已重新开局：黑先白后');
@@ -1575,6 +1603,10 @@
 
   function showGameOver(over, iWin, origin) {
     var t = resultText(over);
+    // 【2026-08-22】终局即退出沉浸式全屏 → 侧栏设置区（先手/禁手/换手 + 段位 + 开始对局）
+    // 恢复可见可调（updateSetupLock 已按 game.over 解锁开关）；否则玩家只能「离开」回大厅
+    // 才能改设置，无法快速重开（用户反馈：对局结束后无法快速调节先手/禁手/换手）。
+    setImmersive(false);
     var close = openModal(
       '<div class="win-banner">' +
       '<div class="big ' + (t.draw ? 'draw' : '') + '">' + t.big + '</div>' +
@@ -1592,6 +1624,8 @@
         if (state.mode === 'ai') {
           startNewGame(true);
           state.aiStarted = true; // 再来一局沿用当前设置并保持锁定
+          // 【2026-08-22】重开新局重新进入沉浸全屏（终局时已退出）
+          setImmersive(true);
           // AI 先手：新局首步由 AI 落子（此前只 startNewGame 导致死局）
           if (state.playerFirst) startTicker();
           else aiFirstMove();
@@ -1602,6 +1636,7 @@
           state.aiStarted = true;
           state.swapDecided = false;
           state.swapped = false;
+          setImmersive(true); // 同上：重开进入沉浸
           startTicker();
           refreshUI();
         }
@@ -2129,15 +2164,17 @@
 
   /** ⋯ 菜单：缩放 / 导出 / 返回大厅（补全沉浸态被隐藏的侧栏功能） */
   function openHudMenu() {
-    var close = openModal(
-      '<div class="modal-title">对局菜单</div>' +
+    // 【GOKUP-005】APK 端不渲染缩放区块（官方自适应理念：布局自适应，无手动缩放）
+    var zoomHtml = IS_APK ? '' :
       '<div class="modal-body" style="margin-bottom:8px;">棋盘缩放</div>' +
       '<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">' +
       '<button class="btn outline" id="m-zoom-out">−</button>' +
       '<span id="m-zoom-label" style="flex:1;text-align:center;font-family:var(--mono);font-size:15px;color:var(--text);">' + Math.round(zoomLevel * 100) + '%</span>' +
       '<button class="btn outline" id="m-zoom-in">＋</button>' +
       '<button class="btn outline" id="m-zoom-reset">重置</button>' +
-      '</div>' +
+      '</div>';
+    var close = openModal(
+      '<div class="modal-title">对局菜单</div>' + zoomHtml +
       '<div class="modal-actions">' +
       '<button class="btn outline" id="m-export-json">导出 JSON</button>' +
       '<button class="btn outline" id="m-export-csv">导出 CSV</button>' +
@@ -2147,9 +2184,11 @@
       '<button class="btn primary" id="m-leave">返回大厅</button>' +
       '</div>'
     );
-    $('m-zoom-in').addEventListener('click', function () { setBoardZoom(zoomLevel + 0.25); });
-    $('m-zoom-out').addEventListener('click', function () { setBoardZoom(zoomLevel - 0.25); });
-    $('m-zoom-reset').addEventListener('click', function () { setBoardZoom(1); });
+    if (!IS_APK) {
+      $('m-zoom-in').addEventListener('click', function () { setBoardZoom(zoomLevel + 0.25); });
+      $('m-zoom-out').addEventListener('click', function () { setBoardZoom(zoomLevel - 0.25); });
+      $('m-zoom-reset').addEventListener('click', function () { setBoardZoom(1); });
+    }
     $('m-export-json').addEventListener('click', doExportCurrentJSON);
     $('m-export-csv').addEventListener('click', doExportCurrentCSV);
     $('m-leave').addEventListener('click', function () { close(); goHome(); });
@@ -2157,10 +2196,12 @@
   $('btn-hud-menu').addEventListener('click', openHudMenu);
 
   // 沉浸态：滚轮 / 双指捏合缩放棋盘（普通态保留按钮缩放）
+  // 【GOKUP-005】APK 端不绑定（官方自适应理念：无手动缩放）
   var scrollEl = document.querySelector('.board-scroll');
   var pinchDist = 0;
   var pinchTouches = null;
-  scrollEl.addEventListener('wheel', function (ev) {
+  if (!IS_APK) {
+    scrollEl.addEventListener('wheel', function (ev) {
     if (!document.body.classList.contains('immersive')) return;
     ev.preventDefault();
     var f = ev.deltaY < 0 ? 1.08 : 0.925;
@@ -2184,6 +2225,7 @@
     }
   }, { passive: true });
   scrollEl.addEventListener('touchend', function () { pinchTouches = null; }, { passive: true });
+  }
 
   $('btn-history-clear').addEventListener('click', function () {
     if (Store.loadAll().length === 0) return;
@@ -2252,10 +2294,15 @@
     beginAIGame();
   });
 
-  // 棋盘缩放
-  $('btn-zoom-in').addEventListener('click', function () { setBoardZoom(zoomLevel + 0.25); });
-  $('btn-zoom-out').addEventListener('click', function () { setBoardZoom(zoomLevel - 0.25); });
-  $('btn-zoom-reset').addEventListener('click', function () { setBoardZoom(1); });
+  // 棋盘缩放（【GOKUP-005】APK 端禁用：控件隐藏 + 不绑定，Web 桌面版保留）
+  if (IS_APK) {
+    var zoomCtl = document.querySelector('.board-zoom');
+    if (zoomCtl) zoomCtl.style.display = 'none';
+  } else {
+    $('btn-zoom-in').addEventListener('click', function () { setBoardZoom(zoomLevel + 0.25); });
+    $('btn-zoom-out').addEventListener('click', function () { setBoardZoom(zoomLevel - 0.25); });
+    $('btn-zoom-reset').addEventListener('click', function () { setBoardZoom(1); });
+  }
 
   // 窗口尺寸变化 → 重绘棋盘
   var resizeTimer = null;
@@ -2264,6 +2311,18 @@
     resizeTimer = setTimeout(function () {
       if (state.view === 'game') resizeBoard();
     }, 150);
+  });
+
+  // 【GOKUP-004】横竖屏切换/系统全屏进出：WebView 部分机型不触发 resize，
+  // 但布局视口已变 → 显式重绘棋盘（延迟到布局稳定后）
+  window.addEventListener('orientationchange', function () {
+    setTimeout(function () { if (state.view === 'game') resizeBoard(); }, 200);
+  });
+  document.addEventListener('fullscreenchange', function () {
+    if (state.view === 'game') resizeBoard();
+  });
+  document.addEventListener('webkitfullscreenchange', function () {
+    if (state.view === 'game') resizeBoard();
   });
 
   // 首次交互解锁音频

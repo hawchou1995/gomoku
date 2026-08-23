@@ -3,9 +3,11 @@ package com.hawchou.gomoku;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.net.Uri;
 import android.os.Bundle;
 import android.webkit.ConsoleMessage;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
@@ -54,6 +56,15 @@ public class MainActivity extends Activity {
         settings.setDisplayZoomControls(false);
         settings.setUseWideViewPort(true);
         settings.setLoadWithOverviewMode(true);
+        // 【GOKUP-005 v1.1.6】注入 APK 平台标记：JS 检测 UA 含 "GomokuApp" 即禁用
+        // 应用内棋盘缩放（按钮/菜单/捏合/滚轮），符合 Android 官方「构建自适应
+        // 游戏」理念——布局自动适配屏幕，不提供手动缩放。Web 桌面版无此标记，
+        // 缩放功能保留。
+        settings.setUserAgentString(settings.getUserAgentString() + " GomokuApp/1.2.9");
+
+        // 【v1.2.6 对局强制竖屏】暴露原生桥给 JS：进入对局 → setPortrait(true)
+        // 锁定竖屏；回大厅 → setPortrait(false) 恢复系统自由方向（用户拍板：仅对局锁）。
+        webView.addJavascriptInterface(new GomokuBridge(), "GomokuBridge");
 
         // 个人侧载包常开（正式上架前应改回 BuildConfig.DEBUG 门控）
         WebView.setWebContentsDebuggingEnabled(true);
@@ -130,8 +141,7 @@ public class MainActivity extends Activity {
     }
 
     /** 追加一行诊断到 diag.txt（getExternalFilesDir，MTP 可见）并同步 logcat。 */
-    private void diag(String tag, String msg) {
-        String line = "[" + new SimpleDateFormat("HH:mm:ss", Locale.US).format(new Date())
+    private void diag(String tag, String msg) {        String line = "[" + new SimpleDateFormat("HH:mm:ss", Locale.US).format(new Date())
                 + "][" + tag + "] " + msg;
         Log.w("GomokuDiag", line);
         try {
@@ -150,4 +160,29 @@ public class MainActivity extends Activity {
     }
 
     private static final String TAG = "GomokuDiag";
+
+    /**
+     * 【v1.2.6 对局强制竖屏】JS 桥：window.GomokuBridge.setPortrait(on)。
+     * - on=true  → 锁定竖屏（对局全流程：设置态 + 沉浸态）
+     * - on=false → 恢复系统自由方向（回大厅）
+     * 注意：Manifest 不加静态 screenOrientation 属性——方向锁完全由 JS 动态控制，
+     * 大厅/历史等非对局界面仍可横竖屏自由旋转。
+     */
+    public class GomokuBridge {
+        @JavascriptInterface
+        public void setPortrait(final boolean on) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        setRequestedOrientation(on
+                                ? ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                                : ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
+                    } catch (Exception e) {
+                        // 方向锁失败不阻塞对局（WebView 侧仍按 CSS 竖排渲染）
+                    }
+                }
+            });
+        }
+    }
 }

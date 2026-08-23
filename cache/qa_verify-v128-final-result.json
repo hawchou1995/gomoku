@@ -1,0 +1,319 @@
+{
+  "generatedAt": "2026-08-23T04:39:29.296Z",
+  "total": 62,
+  "passed": 62,
+  "failed": 0,
+  "allPageErrors": [],
+  "results": [
+    {
+      "ok": true,
+      "name": "M11 非沉浸：dock 覆盖层存在（dock-overlay）",
+      "detail": "h=154.8 z=54"
+    },
+    {
+      "ok": true,
+      "name": "M12 非沉浸：dock 为 fixed 贴底覆盖层 z=54",
+      "detail": "fixed/54"
+    },
+    {
+      "ok": true,
+      "name": "M13 非沉浸：--v128-dock-h 已写入实测高",
+      "detail": "155px"
+    },
+    {
+      "ok": true,
+      "name": "M14 非沉浸：board-scroll padding-top=72",
+      "detail": "padT=72.0"
+    },
+    {
+      "ok": true,
+      "name": "M15 非沉浸：padding-bottom=64（不含 dock 预留，新语义）",
+      "detail": "padB=64.0 dockHVar=155.0"
+    },
+    {
+      "ok": true,
+      "name": "M16 非沉浸：棋盘占满宽 412",
+      "detail": "w=412"
+    },
+    {
+      "ok": true,
+      "name": "M17 非沉浸：棋盘贴左 x=0",
+      "detail": "x=0.0"
+    },
+    {
+      "ok": true,
+      "name": "M18 非沉浸：棋盘边长 412",
+      "detail": "h=412"
+    },
+    {
+      "ok": true,
+      "name": "M19 非沉浸：视口上下留白均衡 |top−bottom|≤8",
+      "detail": "topGap=255.5 botGap=247.5 Δ=8.0"
+    },
+    {
+      "ok": true,
+      "name": "M110 非沉浸：dock 顶缘 ≥ 棋盘底缘（不遮）",
+      "detail": "boardBottom=667.5 dockTop=760.2"
+    },
+    {
+      "ok": true,
+      "name": "M111 非沉浸：board-scroll 无横向滚动",
+      "detail": "412≤412"
+    },
+    {
+      "ok": true,
+      "name": "M112 非沉浸：board-scroll 无垂直滚动",
+      "detail": "915≤915"
+    },
+    {
+      "ok": true,
+      "name": "M113 非沉浸：文档无横向溢出",
+      "detail": "412≤412"
+    },
+    {
+      "ok": true,
+      "name": "M114 非沉浸：CDP 拖 120px 后 scrollY/scrollTop 恒 0",
+      "detail": "scrollY=0 bsTop=0"
+    },
+    {
+      "ok": true,
+      "name": "M115 非沉浸：拖后棋盘 rect 不变",
+      "detail": "{\"x\":0,\"y\":255.5,\"w\":412,\"h\":412,\"right\":412,\"bottom\":667.5}"
+    },
+    {
+      "ok": true,
+      "name": "M116 沉浸：body.immersive 已置位",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "M117 沉浸：dock 覆盖层已移除（回抽屉）",
+      "detail": "removed"
+    },
+    {
+      "ok": true,
+      "name": "M118 沉浸：--v128-dock-h 已移除（旧断言「保留」不再适用）",
+      "detail": "dockHVar=0"
+    },
+    {
+      "ok": true,
+      "name": "M119 沉浸：padding-top=72（与 HUD 顶区同预算）",
+      "detail": "padT=72.0"
+    },
+    {
+      "ok": true,
+      "name": "M120 沉浸：padding-bottom=64（不含 dock-h，新语义非 bug）",
+      "detail": "padB=64.0"
+    },
+    {
+      "ok": true,
+      "name": "M121 两态棋盘 rect 全等（Δ=0）",
+      "detail": "dock={\"x\":0,\"y\":255.5,\"w\":412,\"h\":412,\"right\":412,\"bottom\":667.5} imm={\"x\":0,\"y\":255.5,\"w\":412,\"h\":412,\"right\":412,\"bottom\":667.5}"
+    },
+    {
+      "ok": true,
+      "name": "M122 沉浸：棋盘占满宽 412",
+      "detail": "w=412"
+    },
+    {
+      "ok": true,
+      "name": "M123 沉浸：棋盘 y=255.5±2（居中回归）",
+      "detail": "y=255.5"
+    },
+    {
+      "ok": true,
+      "name": "M124 沉浸：视口上下留白均衡 ≤8",
+      "detail": "topGap=255.5 botGap=247.5 Δ=8.0"
+    },
+    {
+      "ok": true,
+      "name": "M125 沉浸：board-scroll 零滚动",
+      "detail": "412/915 ≤ 412/915"
+    },
+    {
+      "ok": true,
+      "name": "M126 沉浸：CDP 拖 120px 后 scrollY/scrollTop 恒 0",
+      "detail": "scrollY=0 bsTop=0"
+    },
+    {
+      "ok": true,
+      "name": "M127 沉浸：拖后棋盘 rect 不变",
+      "detail": "{\"x\":0,\"y\":255.5,\"w\":412,\"h\":412,\"right\":412,\"bottom\":667.5}"
+    },
+    {
+      "ok": true,
+      "name": "M2[412×915] dock 覆盖层存在",
+      "detail": "h=154.8"
+    },
+    {
+      "ok": true,
+      "name": "M2[412×915] dock 顶缘 ≥ 棋盘底缘（不遮）",
+      "detail": "boardBottom=667.5 dockTop=760.2"
+    },
+    {
+      "ok": true,
+      "name": "M2[412×915] dock 覆盖层在视口内",
+      "detail": "top=760.2 bottom=915.0"
+    },
+    {
+      "ok": true,
+      "name": "M2[412×915] --v128-dock-h 与实测 dock 高一致",
+      "detail": "var=155.0 rect=154.8"
+    },
+    {
+      "ok": true,
+      "name": "M2[412×915] board-scroll 零滚动",
+      "detail": "412/915 ≤ 412/915"
+    },
+    {
+      "ok": true,
+      "name": "M2[412×915] 文档无横向溢出",
+      "detail": "412≤412"
+    },
+    {
+      "ok": true,
+      "name": "M2[412×915] 三主行（段位/开关/开始）完整可见",
+      "detail": ".setup-level-row:36 .toggles:32 #btn-start-ai:33"
+    },
+    {
+      "ok": true,
+      "name": "M2[360×640] dock 覆盖层存在",
+      "detail": "h=109.3"
+    },
+    {
+      "ok": true,
+      "name": "M2[360×640] dock 顶缘 ≥ 棋盘底缘（不遮）",
+      "detail": "boardBottom=504.0 dockTop=530.7"
+    },
+    {
+      "ok": true,
+      "name": "M2[360×640] dock 覆盖层在视口内",
+      "detail": "top=530.7 bottom=640.0"
+    },
+    {
+      "ok": true,
+      "name": "M2[360×640] --v128-dock-h 与实测 dock 高一致",
+      "detail": "var=109.0 rect=109.3"
+    },
+    {
+      "ok": true,
+      "name": "M2[360×640] board-scroll 零滚动",
+      "detail": "360/640 ≤ 360/640"
+    },
+    {
+      "ok": true,
+      "name": "M2[360×640] 文档无横向溢出",
+      "detail": "360≤360"
+    },
+    {
+      "ok": true,
+      "name": "M2[360×640] 三主行（段位/开关/开始）完整可见",
+      "detail": ".setup-level-row:26 .toggles:30 #btn-start-ai:30"
+    },
+    {
+      "ok": true,
+      "name": "M2[412×568] dock 覆盖层存在",
+      "detail": "h=74.0"
+    },
+    {
+      "ok": true,
+      "name": "M2[412×568] dock 顶缘 ≥ 棋盘底缘（不遮）",
+      "detail": "boardBottom=494.0 dockTop=494.0"
+    },
+    {
+      "ok": true,
+      "name": "M2[412×568] dock 覆盖层在视口内",
+      "detail": "top=494.0 bottom=568.0"
+    },
+    {
+      "ok": true,
+      "name": "M2[412×568] --v128-dock-h 与实测 dock 高一致",
+      "detail": "var=74.0 rect=74.0"
+    },
+    {
+      "ok": true,
+      "name": "M2[412×568] board-scroll 零滚动",
+      "detail": "412/568 ≤ 412/568"
+    },
+    {
+      "ok": true,
+      "name": "M2[412×568] 文档无横向溢出",
+      "detail": "412≤412"
+    },
+    {
+      "ok": true,
+      "name": "M2[412×568] dock 被 clamp 至棋盘底净空",
+      "detail": "dockH=74.0 clearBelow=74.0"
+    },
+    {
+      "ok": true,
+      "name": "M3 非沉浸：棋盘在可用区内",
+      "detail": "{\"x\":0,\"y\":144,\"w\":360,\"h\":360,\"right\":360,\"bottom\":504} avail=504"
+    },
+    {
+      "ok": true,
+      "name": "M3 360×640 两态棋盘 rect 全等（Δ=0）",
+      "detail": "dock={\"x\":0,\"y\":144,\"w\":360,\"h\":360,\"right\":360,\"bottom\":504} imm={\"x\":0,\"y\":144,\"w\":360,\"h\":360,\"right\":360,\"bottom\":504}"
+    },
+    {
+      "ok": true,
+      "name": "M3 沉浸：dock 移除 + dock-h 清零",
+      "detail": "dockHVar=0"
+    },
+    {
+      "ok": true,
+      "name": "M5a 进对局未开局：状态=等待开局",
+      "detail": "等待开局…"
+    },
+    {
+      "ok": true,
+      "name": "M5b 悬浮「设置」按钮可见（非沉浸）",
+      "detail": "top=699.0 bottom=740.0"
+    },
+    {
+      "ok": true,
+      "name": "M5c 悬浮按钮在 dock 之上（bottom 避让 dock）",
+      "detail": "fabBottom=740.0 dockTop=760.2"
+    },
+    {
+      "ok": true,
+      "name": "M5d 抽屉可打开（open + 遮罩 show）",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "M5e 抽屉/遮罩 z 序盖过 dock（56/55 > 54）",
+      "detail": "spZ=56 maskZ=55 dockZ=54"
+    },
+    {
+      "ok": true,
+      "name": "M5f 抽屉可关闭（遮罩点击）",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "M5g 开局后玩家先手：状态=轮到你",
+      "detail": "轮到你"
+    },
+    {
+      "ok": true,
+      "name": "M5h 落子被接受：状态进入 AI 思考",
+      "detail": "AI 思考中…"
+    },
+    {
+      "ok": true,
+      "name": "M5i AI 回手成功（离开「AI 思考」）",
+      "detail": "轮到你"
+    },
+    {
+      "ok": true,
+      "name": "M5j 天元出现黑子（5×5 最小亮度=36）",
+      "detail": "{\"minLum\":36,\"minAt\":\"208,208\",\"cssW\":412,\"logicalW\":412}"
+    },
+    {
+      "ok": true,
+      "name": "M6 全程无 pageerror / console.error",
+      "detail": ""
+    }
+  ]
+}

@@ -24,3 +24,16 @@ android/local.properties
 android/captures/
 *.keystore
 keystore-pass.txt
+
+# 【v1.2.9 入库边界】APK 走 GitHub Release 分发，不入 git 仓库
+*.apk
+*.idsig
+
+# 手工链构建产物（manual/out = base/aligned/unsigned.apk + dex 等 83MB）
+manual/out/
+
+# rapfi.data（40MB 对照引擎权重）：网页零引用、纯本地对照基准，不入库
+**/rapfi.data
+
+# 手工链旧快照备份
+**/*.bak-old

@@ -123,20 +123,8 @@
         </div>
 
         <aside class="side-panel">
-          <div class="players">
-            <div class="player-row" id="p-black">
-              <span class="stone black" aria-hidden="true"></span>
-              <span class="player-name" id="p-black-name">黑方 · 房主</span>
-              <span class="player-clock" id="p-black-clock">00:00</span>
-            </div>
-            <div class="player-row" id="p-white">
-              <span class="stone white" aria-hidden="true"></span>
-              <span class="player-name" id="p-white-name">白方 · 等待加入</span>
-              <span class="player-clock" id="p-white-clock">00:00</span>
-            </div>
-          </div>
-
-          <!-- 开局设置区（人机/本地双人模式）：确认好选项再开局，落子后锁定 -->
+          <!-- 开局设置区（人机/本地双人模式）：确认好选项再开局，落子后锁定。
+               v1.2.6 置顶：竖/横屏抽屉打开即见「开始对局」，无需滚动 -->
           <div class="ai-setup" id="ai-setup">
             <div class="setup-head">开局设置 <span class="setup-hint">落子后锁定</span></div>
             <div class="setup-level-row" id="setup-level-row">
@@ -169,6 +157,19 @@
             <button class="btn primary wide" id="btn-start-ai">开始对局</button>
           </div>
 
+          <div class="players">
+            <div class="player-row" id="p-black">
+              <span class="stone black" aria-hidden="true"></span>
+              <span class="player-name" id="p-black-name">黑方 · 房主</span>
+              <span class="player-clock" id="p-black-clock">00:00</span>
+            </div>
+            <div class="player-row" id="p-white">
+              <span class="stone white" aria-hidden="true"></span>
+              <span class="player-name" id="p-white-name">白方 · 等待加入</span>
+              <span class="player-clock" id="p-white-clock">00:00</span>
+            </div>
+          </div>
+
           <div class="controls">
             <button class="btn outline sm" id="btn-undo" disabled>悔棋</button>
             <button class="btn outline sm" id="btn-resign" disabled>认输</button>
@@ -190,6 +191,13 @@
           </div>
         </aside>
       </div>
+
+      <!-- v1.1.7 竖屏：悬浮设置按钮 + 抽屉遮罩（仅竖屏对局视图生效，横屏隐藏） -->
+      <button class="btn-floating-settings" id="btn-floating-settings" title="对局设置" aria-label="对局设置">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        <span>设置</span>
+      </button>
+      <div id="drawer-mask" class="drawer-mask" aria-hidden="true"></div>
     </main>
 
     <!-- ═══ 视图：历史记录 ═══ -->
@@ -207,6 +215,39 @@
       </div>
       <div id="history-list" class="history-list"></div>
     </main>
+
+    <!-- ═══ 沉浸式 HUD（开局后全屏覆盖，移动游戏 App 观感）═══
+         body.immersive 时显示：顶部状态条 + 玩家条 + 底部操作条，
+         毛玻璃浮层，不遮挡棋盘操作。 -->
+    <div id="hud" class="hud hidden" role="application" aria-label="对局控制">
+      <div class="hud-top">
+        <button class="hud-icon-btn" id="btn-hud-leave" title="离开对局" aria-label="离开对局">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <div class="hud-status" id="hud-status">准备中…</div>
+        <button class="hud-icon-btn" id="btn-hud-menu" title="菜单" aria-label="对局菜单">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
+        </button>
+      </div>
+      <div class="hud-players">
+        <div class="hud-player" id="hud-p-black">
+          <span class="stone black" aria-hidden="true"></span>
+          <span class="hud-p-name" id="hud-p-black-name">黑方</span>
+          <span class="hud-p-clock" id="hud-p-black-clock">00:00</span>
+        </div>
+        <span class="hud-vs" aria-hidden="true">VS</span>
+        <div class="hud-player" id="hud-p-white">
+          <span class="stone white" aria-hidden="true"></span>
+          <span class="hud-p-name" id="hud-p-white-name">白方</span>
+          <span class="hud-p-clock" id="hud-p-white-clock">00:00</span>
+        </div>
+      </div>
+      <div class="hud-bottom">
+        <button class="hud-action" id="btn-hud-undo" disabled>悔棋</button>
+        <button class="hud-action" id="btn-hud-resign" disabled>认输</button>
+        <button class="hud-action danger" id="btn-hud-restart" disabled>重开</button>
+      </div>
+    </div>
 
     <!-- ═══ 弹窗：房间 / 结果 ═══ -->
     <div id="modal-root" class="modal-root hidden">

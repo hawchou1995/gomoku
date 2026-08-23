@@ -28,6 +28,16 @@ html {
   color-scheme: dark;
 }
 
+/* 【2026-08-22 禁触控缩放·同坦克 v1.0.3】锁定缩放/双击放大/长按放大，
+   配合 viewport user-scalable=no 与 WebView setSupportZoom(false) 三层互锁。
+   touch-action:manipulation 同时移除双击 300ms 延迟，棋盘落子更跟手。 */
+html, body {
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  overscroll-behavior: none;
+}
+
 html, body { height: 100%; }
 
 body {

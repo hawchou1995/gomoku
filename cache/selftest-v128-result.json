@@ -1,0 +1,338 @@
+{
+  "generatedAt": "2026-08-23T04:05:15.708Z",
+  "total": 66,
+  "passed": 66,
+  "failed": 0,
+  "results": [
+    {
+      "ok": true,
+      "name": "A[412×915] #view-home 无内部溢出 scrollH==clientH",
+      "detail": "scrollH=859 clientH=859"
+    },
+    {
+      "ok": true,
+      "name": "A[412×915] 4 张模式卡片存在",
+      "detail": "count=4"
+    },
+    {
+      "ok": true,
+      "name": "A[412×915] 4 卡片全部在视口内",
+      "detail": "[[129,502],[129,502],[512,884],[512,884]]"
+    },
+    {
+      "ok": true,
+      "name": "A[412×915] 卡片两两不重叠",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "A[412×915] 每卡按钮可见（在卡内且在视口内）",
+      "detail": "[1,1,2,2]"
+    },
+    {
+      "ok": true,
+      "name": "A[412×915] 文档无横向溢出",
+      "detail": "412≤412"
+    },
+    {
+      "ok": true,
+      "name": "A[412×915] lockHomeScroll 已绑定（dataset.lockHome=1）",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "A[412×915] 大厅 touch 拖动 120px 后 scrollY 恒 0",
+      "detail": "scrollY=0"
+    },
+    {
+      "ok": true,
+      "name": "A[360×640] #view-home 无内部溢出 scrollH==clientH",
+      "detail": "scrollH=584 clientH=584"
+    },
+    {
+      "ok": true,
+      "name": "A[360×640] 4 张模式卡片存在",
+      "detail": "count=4"
+    },
+    {
+      "ok": true,
+      "name": "A[360×640] 4 卡片全部在视口内",
+      "detail": "[[128,356],[128,356],[366,594],[366,594]]"
+    },
+    {
+      "ok": true,
+      "name": "A[360×640] 卡片两两不重叠",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "A[360×640] 每卡按钮可见（在卡内且在视口内）",
+      "detail": "[1,1,2,2]"
+    },
+    {
+      "ok": true,
+      "name": "A[360×640] 文档无横向溢出",
+      "detail": "360≤360"
+    },
+    {
+      "ok": true,
+      "name": "A[360×640] lockHomeScroll 已绑定（dataset.lockHome=1）",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "A[412×568(极矮)] #view-home 无内部溢出 scrollH==clientH",
+      "detail": "scrollH=512 clientH=512"
+    },
+    {
+      "ok": true,
+      "name": "A[412×568(极矮)] 4 张模式卡片存在",
+      "detail": "count=4"
+    },
+    {
+      "ok": true,
+      "name": "A[412×568(极矮)] 4 卡片全部在视口内",
+      "detail": "[[129,328],[129,328],[338,537],[338,537]]"
+    },
+    {
+      "ok": true,
+      "name": "A[412×568(极矮)] 卡片两两不重叠",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "A[412×568(极矮)] 每卡按钮可见（在卡内且在视口内）",
+      "detail": "[1,1,2,2]"
+    },
+    {
+      "ok": true,
+      "name": "A[412×568(极矮)] 文档无横向溢出",
+      "detail": "412≤412"
+    },
+    {
+      "ok": true,
+      "name": "A[412×568(极矮)] lockHomeScroll 已绑定（dataset.lockHome=1）",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "A[844×390(横屏)] #view-home 无内部溢出 scrollH==clientH",
+      "detail": "scrollH=334 clientH=334"
+    },
+    {
+      "ok": true,
+      "name": "A[844×390(横屏)] 4 张模式卡片存在",
+      "detail": "count=4"
+    },
+    {
+      "ok": true,
+      "name": "A[844×390(横屏)] 4 卡片全部在视口内",
+      "detail": "[[111,235],[111,235],[243,368],[243,368]]"
+    },
+    {
+      "ok": true,
+      "name": "A[844×390(横屏)] 卡片两两不重叠",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "A[844×390(横屏)] 每卡按钮可见（在卡内且在视口内）",
+      "detail": "[1,1,2,2]"
+    },
+    {
+      "ok": true,
+      "name": "A[844×390(横屏)] 文档无横向溢出",
+      "detail": "844≤844"
+    },
+    {
+      "ok": true,
+      "name": "A[844×390(横屏)] lockHomeScroll 已绑定（dataset.lockHome=1）",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "A[812×375(横屏)] #view-home 无内部溢出 scrollH==clientH",
+      "detail": "scrollH=319 clientH=319"
+    },
+    {
+      "ok": true,
+      "name": "A[812×375(横屏)] 4 张模式卡片存在",
+      "detail": "count=4"
+    },
+    {
+      "ok": true,
+      "name": "A[812×375(横屏)] 4 卡片全部在视口内",
+      "detail": "[[111,228],[111,228],[236,353],[236,353]]"
+    },
+    {
+      "ok": true,
+      "name": "A[812×375(横屏)] 卡片两两不重叠",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "A[812×375(横屏)] 每卡按钮可见（在卡内且在视口内）",
+      "detail": "[1,1,2,2]"
+    },
+    {
+      "ok": true,
+      "name": "A[812×375(横屏)] 文档无横向溢出",
+      "detail": "812≤812"
+    },
+    {
+      "ok": true,
+      "name": "A[812×375(横屏)] lockHomeScroll 已绑定（dataset.lockHome=1）",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "B1 非沉浸 dock 态：#ai-setup 为覆盖层(dock-overlay)",
+      "detail": "h=266"
+    },
+    {
+      "ok": true,
+      "name": "B2 非沉浸 dock 态：--v128-dock-h 已写入实测高",
+      "detail": "266px"
+    },
+    {
+      "ok": true,
+      "name": "B3 非沉浸 dock 态：棋盘占满宽度(412)",
+      "detail": "{\"x\":0,\"y\":122.5,\"w\":412,\"h\":412}"
+    },
+    {
+      "ok": true,
+      "name": "B4 非沉浸 dock 态：棋盘水平居中 cx=206",
+      "detail": "x=0.0"
+    },
+    {
+      "ok": true,
+      "name": "B5 开局后进入沉浸态",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "B6 沉浸态：--v128-dock-h 保留（两态同值）",
+      "detail": "266px"
+    },
+    {
+      "ok": true,
+      "name": "B7 沉浸态：padding-bottom 含 dock 预留(>64)",
+      "detail": "padB=330.0"
+    },
+    {
+      "ok": true,
+      "name": "B8 两态棋盘矩形完全相同（Δ=0：x/y/w/h 全等）",
+      "detail": "dock={\"x\":0,\"y\":122.5,\"w\":412,\"h\":412} imm={\"x\":0,\"y\":122.5,\"w\":412,\"h\":412}"
+    },
+    {
+      "ok": true,
+      "name": "B9 沉浸态：棋盘占满宽度(412)",
+      "detail": "{\"x\":0,\"y\":122.5,\"w\":412,\"h\":412}"
+    },
+    {
+      "ok": true,
+      "name": "B10 沉浸态：棋盘水平居中",
+      "detail": "left=0.0 right=0.0"
+    },
+    {
+      "ok": true,
+      "name": "B11 沉浸态：棋盘垂直居中于内容区（margin:auto 语义）",
+      "detail": "topGap=50.5 botGap=50.5 Δ=0.0"
+    },
+    {
+      "ok": true,
+      "name": "B12 沉浸态棋盘 ≤ 可用内容区（永不溢出）",
+      "detail": "412.0≤513.0"
+    },
+    {
+      "ok": true,
+      "name": "C[412×915] dock 顶缘 ≥ 棋盘底缘（不遮棋盘）",
+      "detail": "boardBottom=535 dockTop=649"
+    },
+    {
+      "ok": true,
+      "name": "C[412×915] dock 覆盖层在视口内",
+      "detail": "top=649 bottom=915"
+    },
+    {
+      "ok": true,
+      "name": "C[360×640] dock 顶缘 ≥ 棋盘底缘（不遮棋盘）",
+      "detail": "boardBottom=316 dockTop=380"
+    },
+    {
+      "ok": true,
+      "name": "C[360×640] dock 覆盖层在视口内",
+      "detail": "top=380 bottom=640"
+    },
+    {
+      "ok": true,
+      "name": "D1 非沉浸 dock 态：棋盘 touch 拖动 120px 位移 0",
+      "detail": "scrollY=0 boardScrollTop=0"
+    },
+    {
+      "ok": true,
+      "name": "D2 非沉浸 dock 态：拖动后棋盘 rect 不变",
+      "detail": "{\"x\":0,\"y\":122.5,\"w\":412,\"h\":412}"
+    },
+    {
+      "ok": true,
+      "name": "D3 沉浸态：棋盘 touch 拖动 120px 位移 0",
+      "detail": "scrollY=0 boardScrollTop=0"
+    },
+    {
+      "ok": true,
+      "name": "D4 沉浸态：拖动后棋盘矩形不变",
+      "detail": "{\"x\":0,\"y\":122.5,\"w\":412,\"h\":412}"
+    },
+    {
+      "ok": true,
+      "name": "E1 进对局未开局：状态=等待开局",
+      "detail": "等待开局…"
+    },
+    {
+      "ok": true,
+      "name": "E2 开局后玩家先手：状态=轮到你",
+      "detail": "轮到你"
+    },
+    {
+      "ok": true,
+      "name": "E3 落子被接受：状态进入 AI 思考",
+      "detail": "AI 思考中…"
+    },
+    {
+      "ok": true,
+      "name": "E4 落子像素验证：天元格出现黑子（亮度=27）",
+      "detail": "{\"r\":24,\"g\":27,\"b\":31}"
+    },
+    {
+      "ok": true,
+      "name": "E5 AI 回手成功（状态离开「AI 思考」回到玩家回合/终局）",
+      "detail": "轮到你"
+    },
+    {
+      "ok": true,
+      "name": "F1 360×640 dock 态：dock 不遮棋盘",
+      "detail": "boardBottom=316 dockTop=380"
+    },
+    {
+      "ok": true,
+      "name": "F2 360×640 两态棋盘矩形一致",
+      "detail": "{\"x\":58,\"y\":72,\"w\":244,\"h\":244}"
+    },
+    {
+      "ok": true,
+      "name": "F3 360×640 沉浸棋盘在视口内",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "F4 360×640 开局后状态正常",
+      "detail": "轮到你"
+    },
+    {
+      "ok": true,
+      "name": "H 全程无 pageerror / console.error",
+      "detail": ""
+    }
+  ]
+}

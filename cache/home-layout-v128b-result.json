@@ -1,0 +1,314 @@
+{
+  "generatedAt": "2026-08-23T06:08:02.143Z",
+  "total": 61,
+  "passed": 61,
+  "failed": 0,
+  "pageErrors": [],
+  "results": [
+    {
+      "ok": true,
+      "name": "412x915 H1 卡1 不被拉伸 h=159px≤220",
+      "detail": "scrollH=157/clientH=157"
+    },
+    {
+      "ok": true,
+      "name": "412x915 H1b 卡1 内部无溢出",
+      "detail": "scrollH=157/clientH=157"
+    },
+    {
+      "ok": true,
+      "name": "412x915 H1c 卡1 横向无溢出",
+      "detail": "scrollW=187/clientW=187"
+    },
+    {
+      "ok": true,
+      "name": "412x915 H1 卡2 不被拉伸 h=159px≤220",
+      "detail": "scrollH=157/clientH=157"
+    },
+    {
+      "ok": true,
+      "name": "412x915 H1b 卡2 内部无溢出",
+      "detail": "scrollH=157/clientH=157"
+    },
+    {
+      "ok": true,
+      "name": "412x915 H1c 卡2 横向无溢出",
+      "detail": "scrollW=187/clientW=187"
+    },
+    {
+      "ok": true,
+      "name": "412x915 H1 卡3 不被拉伸 h=173px≤220",
+      "detail": "scrollH=171/clientH=171"
+    },
+    {
+      "ok": true,
+      "name": "412x915 H1b 卡3 内部无溢出",
+      "detail": "scrollH=171/clientH=171"
+    },
+    {
+      "ok": true,
+      "name": "412x915 H1c 卡3 横向无溢出",
+      "detail": "scrollW=187/clientW=187"
+    },
+    {
+      "ok": true,
+      "name": "412x915 H1 卡4 不被拉伸 h=173px≤220",
+      "detail": "scrollH=171/clientH=171"
+    },
+    {
+      "ok": true,
+      "name": "412x915 H1b 卡4 内部无溢出",
+      "detail": "scrollH=171/clientH=171"
+    },
+    {
+      "ok": true,
+      "name": "412x915 H1c 卡4 横向无溢出",
+      "detail": "scrollW=187/clientW=187"
+    },
+    {
+      "ok": true,
+      "name": "412x915 H2 卡1 全可见",
+      "detail": "bottom=495 ≤ 915"
+    },
+    {
+      "ok": true,
+      "name": "412x915 H2 卡2 全可见",
+      "detail": "bottom=495 ≤ 915"
+    },
+    {
+      "ok": true,
+      "name": "412x915 H2 卡3 全可见",
+      "detail": "bottom=678 ≤ 915"
+    },
+    {
+      "ok": true,
+      "name": "412x915 H2 卡4 全可见",
+      "detail": "bottom=678 ≤ 915"
+    },
+    {
+      "ok": true,
+      "name": "412x915 H3 卡片组在容器内居中",
+      "detail": "innerTop=206/innerBot=206 diff=0px"
+    },
+    {
+      "ok": true,
+      "name": "412x915 H3b 卡片组视口内均衡(观察)",
+      "detail": "vTop=280/vBot=237 diff=42px"
+    },
+    {
+      "ok": true,
+      "name": "412x915 H4 下拉 120px 零滚动",
+      "detail": "scrollY=0 vh.scrollTop=0"
+    },
+    {
+      "ok": true,
+      "name": "412x915 H5 view-home 无内容溢出",
+      "detail": "scrollH=859/clientH=859"
+    },
+    {
+      "ok": true,
+      "name": "360x640 H1 卡1 不被拉伸 h=158px≤190",
+      "detail": "scrollH=156/clientH=156"
+    },
+    {
+      "ok": true,
+      "name": "360x640 H1b 卡1 内部无溢出",
+      "detail": "scrollH=156/clientH=156"
+    },
+    {
+      "ok": true,
+      "name": "360x640 H1c 卡1 横向无溢出",
+      "detail": "scrollW=161/clientW=161"
+    },
+    {
+      "ok": true,
+      "name": "360x640 H1 卡2 不被拉伸 h=158px≤190",
+      "detail": "scrollH=156/clientH=156"
+    },
+    {
+      "ok": true,
+      "name": "360x640 H1b 卡2 内部无溢出",
+      "detail": "scrollH=156/clientH=156"
+    },
+    {
+      "ok": true,
+      "name": "360x640 H1c 卡2 横向无溢出",
+      "detail": "scrollW=161/clientW=161"
+    },
+    {
+      "ok": true,
+      "name": "360x640 H1 卡3 不被拉伸 h=171px≤190",
+      "detail": "scrollH=169/clientH=169"
+    },
+    {
+      "ok": true,
+      "name": "360x640 H1b 卡3 内部无溢出",
+      "detail": "scrollH=169/clientH=169"
+    },
+    {
+      "ok": true,
+      "name": "360x640 H1c 卡3 横向无溢出",
+      "detail": "scrollW=161/clientW=161"
+    },
+    {
+      "ok": true,
+      "name": "360x640 H1 卡4 不被拉伸 h=171px≤190",
+      "detail": "scrollH=169/clientH=169"
+    },
+    {
+      "ok": true,
+      "name": "360x640 H1b 卡4 内部无溢出",
+      "detail": "scrollH=169/clientH=169"
+    },
+    {
+      "ok": true,
+      "name": "360x640 H1c 卡4 横向无溢出",
+      "detail": "scrollW=161/clientW=161"
+    },
+    {
+      "ok": true,
+      "name": "360x640 H2 卡1 全可见",
+      "detail": "bottom=349 ≤ 640"
+    },
+    {
+      "ok": true,
+      "name": "360x640 H2 卡2 全可见",
+      "detail": "bottom=349 ≤ 640"
+    },
+    {
+      "ok": true,
+      "name": "360x640 H2 卡3 全可见",
+      "detail": "bottom=531 ≤ 640"
+    },
+    {
+      "ok": true,
+      "name": "360x640 H2 卡4 全可见",
+      "detail": "bottom=531 ≤ 640"
+    },
+    {
+      "ok": true,
+      "name": "360x640 H3 卡片组在容器内居中",
+      "detail": "innerTop=63/innerBot=63 diff=0px"
+    },
+    {
+      "ok": true,
+      "name": "360x640 H3b 卡片组视口内均衡(观察)",
+      "detail": "vTop=136/vBot=109 diff=26px"
+    },
+    {
+      "ok": true,
+      "name": "360x640 H4 下拉 120px 零滚动",
+      "detail": "scrollY=0 vh.scrollTop=0"
+    },
+    {
+      "ok": true,
+      "name": "360x640 H5 view-home 无内容溢出",
+      "detail": "scrollH=584/clientH=584"
+    },
+    {
+      "ok": true,
+      "name": "412x568 H1 卡1 不被拉伸 h=107px≤190",
+      "detail": "scrollH=105/clientH=105"
+    },
+    {
+      "ok": true,
+      "name": "412x568 H1b 卡1 内部无溢出",
+      "detail": "scrollH=105/clientH=105"
+    },
+    {
+      "ok": true,
+      "name": "412x568 H1c 卡1 横向无溢出",
+      "detail": "scrollW=191/clientW=191"
+    },
+    {
+      "ok": true,
+      "name": "412x568 H1 卡2 不被拉伸 h=107px≤190",
+      "detail": "scrollH=105/clientH=105"
+    },
+    {
+      "ok": true,
+      "name": "412x568 H1b 卡2 内部无溢出",
+      "detail": "scrollH=105/clientH=105"
+    },
+    {
+      "ok": true,
+      "name": "412x568 H1c 卡2 横向无溢出",
+      "detail": "scrollW=191/clientW=191"
+    },
+    {
+      "ok": true,
+      "name": "412x568 H1 卡3 不被拉伸 h=119px≤190",
+      "detail": "scrollH=117/clientH=117"
+    },
+    {
+      "ok": true,
+      "name": "412x568 H1b 卡3 内部无溢出",
+      "detail": "scrollH=117/clientH=117"
+    },
+    {
+      "ok": true,
+      "name": "412x568 H1c 卡3 横向无溢出",
+      "detail": "scrollW=191/clientW=191"
+    },
+    {
+      "ok": true,
+      "name": "412x568 H1 卡4 不被拉伸 h=119px≤190",
+      "detail": "scrollH=117/clientH=117"
+    },
+    {
+      "ok": true,
+      "name": "412x568 H1b 卡4 内部无溢出",
+      "detail": "scrollH=117/clientH=117"
+    },
+    {
+      "ok": true,
+      "name": "412x568 H1c 卡4 横向无溢出",
+      "detail": "scrollW=191/clientW=191"
+    },
+    {
+      "ok": true,
+      "name": "412x568 H2 卡1 全可见",
+      "detail": "bottom=319 ≤ 568"
+    },
+    {
+      "ok": true,
+      "name": "412x568 H2 卡2 全可见",
+      "detail": "bottom=319 ≤ 568"
+    },
+    {
+      "ok": true,
+      "name": "412x568 H2 卡3 全可见",
+      "detail": "bottom=444 ≤ 568"
+    },
+    {
+      "ok": true,
+      "name": "412x568 H2 卡4 全可见",
+      "detail": "bottom=444 ≤ 568"
+    },
+    {
+      "ok": true,
+      "name": "412x568 H3 卡片组在容器内居中",
+      "detail": "innerTop=102/innerBot=102 diff=0px"
+    },
+    {
+      "ok": true,
+      "name": "412x568 H3b 卡片组视口内均衡(观察)",
+      "detail": "vTop=156/vBot=124 diff=32px"
+    },
+    {
+      "ok": true,
+      "name": "412x568 H4 下拉 120px 零滚动",
+      "detail": "scrollY=0 vh.scrollTop=0"
+    },
+    {
+      "ok": true,
+      "name": "412x568 H5 view-home 无内容溢出",
+      "detail": "scrollH=512/clientH=512"
+    },
+    {
+      "ok": true,
+      "name": "H6 全程 0 页面错误",
+      "detail": ""
+    }
+  ]
+}
