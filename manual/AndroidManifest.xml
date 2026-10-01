@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.hawchou.gomoku"
-    android:versionCode="21"
-    android:versionName="1.2.9">
+    android:versionCode="22"
+    android:versionName="1.3.0">
 
     <!-- 手工构建无 AGP 注入：必须显式声明，否则部分 ROM 报「应用与手机不兼容」；
          minSdk 24 与坦克一致，兼容 Android 7.0+；图标已补 mipmap-* 多密度 PNG 低版本回退 -->

@@ -1,0 +1,301 @@
+{
+  "title": "Gomoku v1.3.0 QA Verification Report",
+  "date": "2026-10-01T13:09:23.808Z",
+  "total": 58,
+  "passed": 58,
+  "failed": 0,
+  "status": "ALL_PASS",
+  "results": [
+    {
+      "ok": true,
+      "name": "[412x915] 四张手游模式卡片全部存在",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "[412x915] 卡片 1 保持自然高度 (h=159px ≤ 220px)",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "[412x915] 卡片 1 内部无垂直溢出",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "[412x915] 卡片 1 底部完整处于视口内",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "[412x915] 卡片 2 保持自然高度 (h=159px ≤ 220px)",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "[412x915] 卡片 2 内部无垂直溢出",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "[412x915] 卡片 2 底部完整处于视口内",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "[412x915] 卡片 3 保持自然高度 (h=173px ≤ 220px)",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "[412x915] 卡片 3 内部无垂直溢出",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "[412x915] 卡片 3 底部完整处于视口内",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "[412x915] 卡片 4 保持自然高度 (h=173px ≤ 220px)",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "[412x915] 卡片 4 内部无垂直溢出",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "[412x915] 卡片 4 底部完整处于视口内",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "[412x915] 大厅触控防拖动锁定（下拉 120px 后 scrollY 恒为 0）",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "[360x640] 四张手游模式卡片全部存在",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "[360x640] 卡片 1 保持自然高度 (h=158px ≤ 190px)",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "[360x640] 卡片 1 内部无垂直溢出",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "[360x640] 卡片 1 底部完整处于视口内",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "[360x640] 卡片 2 保持自然高度 (h=158px ≤ 190px)",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "[360x640] 卡片 2 内部无垂直溢出",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "[360x640] 卡片 2 底部完整处于视口内",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "[360x640] 卡片 3 保持自然高度 (h=171px ≤ 190px)",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "[360x640] 卡片 3 内部无垂直溢出",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "[360x640] 卡片 3 底部完整处于视口内",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "[360x640] 卡片 4 保持自然高度 (h=171px ≤ 190px)",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "[360x640] 卡片 4 内部无垂直溢出",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "[360x640] 卡片 4 底部完整处于视口内",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "[360x640] 大厅触控防拖动锁定（下拉 120px 后 scrollY 恒为 0）",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "[412x568] 四张手游模式卡片全部存在",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "[412x568] 卡片 1 保持自然高度 (h=107px ≤ 190px)",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "[412x568] 卡片 1 内部无垂直溢出",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "[412x568] 卡片 1 底部完整处于视口内",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "[412x568] 卡片 2 保持自然高度 (h=107px ≤ 190px)",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "[412x568] 卡片 2 内部无垂直溢出",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "[412x568] 卡片 2 底部完整处于视口内",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "[412x568] 卡片 3 保持自然高度 (h=119px ≤ 190px)",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "[412x568] 卡片 3 内部无垂直溢出",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "[412x568] 卡片 3 底部完整处于视口内",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "[412x568] 卡片 4 保持自然高度 (h=119px ≤ 190px)",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "[412x568] 卡片 4 内部无垂直溢出",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "[412x568] 卡片 4 底部完整处于视口内",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "[412x568] 大厅触控防拖动锁定（下拉 120px 后 scrollY 恒为 0）",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "[844x390] 横屏大厅自适应渲染成功并截图留存",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "未开局态棋盘宽度占满屏幕 (w=412px)",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "未开局态棋盘在视口内垂直居中 (topGap=255.5, bottomGap=247.5, diff=8.0px ≤ 8px)",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "核心门禁：开局前后棋盘宽度严格零跳变 (Δw = 0px)",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "核心门禁：开局前后棋盘高度严格零跳变 (Δh = 0px)",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "核心门禁：开局前后棋盘水平坐标严格零跳变 (Δx = 0px)",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "核心门禁：开局前后棋盘垂直坐标严格零跳变 (Δy = 0px)",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "沉浸开局态棋盘在视口内垂直居中 (topGap=255.5, bottomGap=247.5, diff=8.0px ≤ 8px)",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "棋盘面板禁止任何手势拖动与位移（120px 手势后位移恒为 0）",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "天元落子曜石黑棋像素级呈现（最小亮度 = 33.0 < 95）",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "HUD 悔棋按钮已点亮可用",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "悔棋响应正常",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "[412x915] 开局设置面板绝不遮挡棋盘 (净空 gap = 92.7px ≥ 0)",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "[360x640] 开局设置面板绝不遮挡棋盘 (净空 gap = 26.7px ≥ 0)",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "[412x568] 开局设置面板绝不遮挡棋盘 (净空 gap = 0.0px ≥ 0)",
+      "detail": ""
+    },
+    {
+      "ok": true,
+      "name": "全流程 0 pageerror / 0 console.error",
+      "detail": ""
+    }
+  ],
+  "pageErrors": []
+}

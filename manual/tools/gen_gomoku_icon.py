@@ -1,51 +1,48 @@
 # -*- coding: utf-8 -*-
-"""生成五子棋「五子连珠」启动图标（纯标准库，v5）：
+"""生成五子棋手游级「五子连珠」启动图标（纯标准库，v6 手游质感升级版）：
 1. 自适应图标前景层 drawable-*/ic_launcher_foreground.png —— Android 8+ 前景
-   （108dp 画布、透明底、棋盘网格线 + 主对角线五颗黑子，棋子内收安全区）；
-2. 自适应背景层 drawable-*/ic_launcher_background.png —— 满幅木色（棋盘底），
-   配合前景层合成「圆角木色棋盘」图标——无深色黑底（用户 v1.2.0 反馈）；
-3. 低版本回退 mipmap-*/ic_launcher.png —— Android 7-（满幅木色棋盘 + 圆角遮罩）。
+   （108dp 画布、透明底、微立体棋盘 + 细腻金边 + 榧木纹理 + 曜石高光五连珠 + 胜利金色光华）；
+2. 自适应背景层 drawable/ic_launcher_background.xml —— 暖色渐变实木质感；
+3. 低版本回退 mipmap-*/ic_launcher.png —— Android 7-（带圆角抗锯齿遮罩的完整手游拟物图标）。
 
-v5 相对 v4 的变更（v1.2.1 · 去掉「深色底 + 居中棋盘」构图，棋盘铺满）：
-- 删除深色背景 DARK：图标主体 = 木色棋盘铺满整幅（不再有近黑背景占比 69% 的问题）；
-- 前景层只画网格线与棋子（透明底，木色由背景层提供）→ 合成即圆角木棋盘；
-- 低版本回退：实木棋盘满幅 + 圆角遮罩（四角透明），无黑底。
-
-v4 相对 v3 的变更（v1.2.0 · 圆角做进资源本身，不再依赖系统遮罩）：
-- 低版本回退 PNG 深色底改为圆角矩形（四角透明，圆角半径 22dp/108dp）；
-  三星桌面若按「原始形状」显示图标（不套系统遮罩），图标也不再是直角正方形；
-- 前景层 PNG 保持透明底 + 居中棋盘（内容本身在安全区内，天然圆角兼容）。
-
-设计说明（沿用 v2 的五子连珠）：
-- 24x24 逻辑画布，浅木色棋盘底 + 5x5 深棕网格线，边缘留出棋盘边；
-- 五颗棋子沿主对角线（左上→右下）连成一线（五子连珠），落子黑先：
-  全黑五连（同色五连，严格符合五子棋规则）；
-- 立体感：每颗棋子先画右下方投影再画本体；黑子带左上白高光 + 亮芯与
-  右下暗部；
-- 圆形采用抗锯齿覆盖率（smooth 边缘），直接以目标分辨率渲染，放大后
-  边缘干净，不会呈马赛克糊点。
+设计特点（基于 taste-skill / brandkit 审美）：
+- 材质：高端榧木盘面质感，带微妙年轮纹理起伏与四周高光斜切倒角（Chamfer）；
+- 金线：网格四周边框内衬雅致金线（Gold Inlay），极具国风雅韵与商业手游品质；
+- 棋子：五颗曜石黑子沿主对角线五子连珠，带有双重漫反射曲面、曜石高光与底部接触阴影；
+- 胜利光华：连珠五子下方带有典雅的胜利金色微辉光（Golden Renju Aura），传达五子成珠的决胜时刻；
+- 分辨率自适应：纯数学抗锯齿渲染，从 48px 到 432px 保持极佳锐度与微质感。
 """
 import struct, zlib, os, math
 
-# ---- 调色板（与 v2/v3 一致）----
-BG       = (247, 218, 187)   # 浅木色棋盘底
-GRID     = (122, 92, 58)     # 棋盘网格线（深棕）
-BLACK    = (52, 50, 52)      # 黑子
-BLACK_SH = (16, 15, 17)      # 黑子暗部
-WHITE    = (250, 248, 244)   # 白子
-WHITE_SH = (150, 148, 148)   # 白子暗部
-EDGE     = (52, 50, 48)      # 白子深色描边
-HILITE   = (255, 255, 255)   # 高光
-SHADOW   = (0, 0, 0)         # 投影
-SHADOW_A = 0.28              # 投影透明度
-DARK     = (15, 17, 21)      # 深色背景 #0F1115（与站点 theme-color 一致）
+# ---- 调色板（雅致新国风榧木手游色系）----
+BG_TOP     = (249, 226, 196)   # 顶部受光榧木色
+BG_MID     = (242, 212, 178)   # 中心榧木色
+BG_BOT     = (226, 191, 153)   # 底部暗部榧木色
+WOOD_DARK  = (214, 175, 134)   # 木纹深色条带
+WOOD_LGT   = (252, 233, 209)   # 木纹浅色条带
 
-BOARD_FRAC = 0.96            # 【v5】棋盘边长占画布比例（96%，接近铺满；安全边距留 2%）
-CORNER_R   = 22.0 / 108.0    # 圆角半径占画布比例（22dp / 108dp，约 20%，接近三星观感）
+GRID_LINE  = (112, 75, 42)     # 网格线条（温润深褐色，含墨色感）
+GOLD_INLAY = (212, 168, 64)    # 雅致金边镶嵌色
+GOLD_GLOW  = (255, 215, 80)    # 胜利金辉
+STAR_POINT = (100, 65, 36)     # 星位（天元与星位）
+
+STONE_BASE = (32, 30, 32)      # 曜石黑子基底
+STONE_BODY = (48, 45, 48)      # 曜石受光面
+STONE_SH   = (16, 14, 16)      # 曜石背光暗面
+STONE_SPEC = (255, 255, 255)   # 曜石高光
+STONE_RIM  = (180, 160, 140)   # 棋子边缘微弱环境反光
+
+BEVEL_LGT  = (255, 250, 240)   # 棋盘顶部/左侧外倒角高光
+BEVEL_DRK  = (120, 80, 45)     # 棋盘底部/右侧外倒角阴影
+
+SHADOW_COL = (0, 0, 0)         # 投影底色
+
+BOARD_FRAC = 0.94              # 棋盘边长占画布比例（94%，留出精细边缘倒角）
+CORNER_R   = 22.0 / 108.0      # 圆角半径占画布比例（22dp / 108dp）
 
 
 def make_grid(PX, bg=None):
-    """PX×PX 像素网格；bg=None 时全透明（None 表示透明），否则填 bg（RGB）。"""
+    """PX×PX 像素网格；bg=None 时全透明，否则填 bg（RGB）。"""
     if bg is None:
         return [[None] * PX for _ in range(PX)]
     return [[bg + (255,)] * PX for _ in range(PX)]
@@ -56,7 +53,7 @@ def blend(grid, PX, x, y, c, a):
     if not (0 <= x < PX and 0 <= y < PX) or a <= 0.0:
         return
     cur = grid[y][x]
-    sa = a
+    sa = max(0.0, min(1.0, a))
     if cur is None:
         grid[y][x] = (round(c[0] * sa), round(c[1] * sa), round(c[2] * sa), round(255 * sa))
         return
@@ -72,7 +69,9 @@ def blend(grid, PX, x, y, c, a):
 
 
 def circle(grid, PX, cx, cy, r, c, a=1.0, clip=None):
-    """抗锯齿实心圆；clip=(ccx, ccy, cr) 时只画落在该圆内的部分（用于局部暗部）。"""
+    """抗锯齿实心圆；clip=(ccx, ccy, cr) 时只画落在该圆内的部分。"""
+    if r <= 0.0 or a <= 0.0:
+        return
     x0 = max(0, int(math.floor(cx - r - 1)))
     x1 = min(PX - 1, int(math.ceil(cx + r + 1)))
     y0 = max(0, int(math.floor(cy - r - 1)))
@@ -85,12 +84,29 @@ def circle(grid, PX, cx, cy, r, c, a=1.0, clip=None):
                 if clip is not None:
                     dc = math.hypot(x + 0.5 - clip[0], y + 0.5 - clip[1])
                     cov *= max(0.0, min(1.0, clip[2] + 0.5 - dc))
-                blend(grid, PX, x, y, c, a * cov)
+                if cov > 0.0:
+                    blend(grid, PX, x, y, c, a * cov)
 
 
-def hline(grid, PX, y, x0, x1, c):
-    """抗锯齿水平线：中心线 y（浮点），x 从 x0 到 x1（浮点），线宽 1px。"""
-    ylo, yhi = y - 0.5, y + 0.5
+def fill_rect(grid, PX, x0, y0, x1, y1, c, a=1.0):
+    """抗锯齿填充矩形。"""
+    xlo, xhi = min(x0, x1), max(x0, x1)
+    ylo, yhi = min(y0, y1), max(y0, y1)
+    for yy in range(max(0, int(math.floor(ylo))), min(PX, int(math.ceil(yhi)) + 1)):
+        cov_y = max(0.0, min(1.0, min(yhi, yy + 0.5) - max(ylo, yy - 0.5)))
+        if cov_y <= 0.0:
+            continue
+        for xx in range(max(0, int(math.floor(xlo))), min(PX, int(math.ceil(xhi)) + 1)):
+            cov_x = max(0.0, min(1.0, min(xhi, xx + 0.5) - max(xlo, xx - 0.5)))
+            cov = cov_y * cov_x
+            if cov > 0.0:
+                blend(grid, PX, xx, yy, c, a * cov)
+
+
+def hline(grid, PX, y, x0, x1, c, w=1.0, a=1.0):
+    """抗锯齿水平线，支持浮点线宽 w。"""
+    hw = w / 2.0
+    ylo, yhi = y - hw, y + hw
     xlo, xhi = min(x0, x1), max(x0, x1)
     for yy in range(max(0, int(math.floor(ylo))), min(PX, int(math.ceil(yhi)) + 1)):
         cov_y = max(0.0, min(1.0, min(yhi, yy + 0.5) - max(ylo, yy - 0.5)))
@@ -100,12 +116,13 @@ def hline(grid, PX, y, x0, x1, c):
             cov_x = max(0.0, min(1.0, min(xhi, xx + 0.5) - max(xlo, xx - 0.5)))
             cov = cov_y * cov_x
             if cov > 0.0:
-                blend(grid, PX, xx, yy, c, cov)
+                blend(grid, PX, xx, yy, c, a * cov)
 
 
-def vline(grid, PX, x, y0, y1, c):
-    """抗锯齿垂直线：中心线 x（浮点），y 从 y0 到 y1（浮点），线宽 1px。"""
-    xlo, xhi = x - 0.5, x + 0.5
+def vline(grid, PX, x, y0, y1, c, w=1.0, a=1.0):
+    """抗锯齿垂直线，支持浮点线宽 w。"""
+    hw = w / 2.0
+    xlo, xhi = x - hw, x + hw
     ylo, yhi = min(y0, y1), max(y0, y1)
     for xx in range(max(0, int(math.floor(xlo))), min(PX, int(math.ceil(xhi)) + 1)):
         cov_x = max(0.0, min(1.0, min(xhi, xx + 0.5) - max(xlo, xx - 0.5)))
@@ -115,58 +132,135 @@ def vline(grid, PX, x, y0, y1, c):
             cov_y = max(0.0, min(1.0, min(yhi, yy + 0.5) - max(ylo, yy - 0.5)))
             cov = cov_x * cov_y
             if cov > 0.0:
-                blend(grid, PX, xx, yy, c, cov)
+                blend(grid, PX, xx, yy, c, a * cov)
 
 
-def stone(grid, PX, cx, cy, r, kind):
-    """画一颗棋子：kind='b' 黑子 / 'w' 白子；r 为半径（像素）。"""
-    k = r / 2.5  # 相对 24 单位设计的缩放
-    # 右下方投影（先画，本体盖住中央，四周露出投影边）
-    circle(grid, PX, cx + 0.75 * k, cy + 0.75 * k, r + 0.45 * k, SHADOW, SHADOW_A)
-    if kind == 'b':
-        circle(grid, PX, cx, cy, r, BLACK)
-        # 右下暗部（裁剪在棋子内）
-        circle(grid, PX, cx + 0.7 * k, cy + 0.7 * k, r - 0.3 * k, BLACK_SH, 0.38, clip=(cx, cy, r))
-        # 左上高光 + 亮芯
-        circle(grid, PX, cx - 1.05 * k, cy - 1.05 * k, 1.05 * k, HILITE, 0.90)
-        circle(grid, PX, cx - 1.35 * k, cy - 1.35 * k, 0.42 * k, HILITE, 1.0)
-    else:
-        # 白子：深色描边外圈 + 白色面
-        circle(grid, PX, cx, cy, r, EDGE)
-        circle(grid, PX, cx, cy, r - 0.7 * k, WHITE)
-        # 右下浅灰暗部（裁剪在白面内）
-        circle(grid, PX, cx + 0.6 * k, cy + 0.6 * k, r - 0.2 * k, WHITE_SH, 0.55, clip=(cx, cy, r - 0.7 * k))
+def line(grid, PX, x0, y0, x1, y1, c, w=1.0, a=1.0):
+    """绘制平滑抗锯齿线段。"""
+    length = math.hypot(x1 - x0, y1 - y0)
+    if length <= 0.001:
+        return
+    steps = max(2, int(length * 2.5))
+    hw = w / 2.0
+    for i in range(steps + 1):
+        t = i / float(steps)
+        cx = x0 + t * (x1 - x0)
+        cy = y0 + t * (y1 - y0)
+        circle(grid, PX, cx, cy, hw, c, a)
 
 
-def fill_rect(grid, PX, x0, y0, x1, y1, c):
-    """抗锯齿填充矩形（浮点坐标）。"""
-    xlo, xhi = min(x0, x1), max(x0, x1)
-    ylo, yhi = min(y0, y1), max(y0, y1)
-    for yy in range(max(0, int(math.floor(ylo))), min(PX, int(math.ceil(yhi)) + 1)):
-        cov_y = max(0.0, min(1.0, min(yhi, yy + 0.5) - max(ylo, yy - 0.5)))
-        if cov_y <= 0.0:
+def render_wood_plate(grid, PX, ox, oy, size):
+    """渲染具有自然年轮微起伏与精细斜切倒角的实木底板。"""
+    # 逐行渐变与微木纹
+    for y_idx in range(int(math.floor(oy)), int(math.ceil(oy + size))):
+        if not (0 <= y_idx < PX):
             continue
-        for xx in range(max(0, int(math.floor(xlo))), min(PX, int(math.ceil(xhi)) + 1)):
-            cov_x = max(0.0, min(1.0, min(xhi, xx + 0.5) - max(xlo, xx - 0.5)))
-            cov = cov_x * cov_y
-            if cov > 0.0:
-                blend(grid, PX, xx, yy, c, cov)
+        v = (y_idx - oy) / float(size)
+        v = max(0.0, min(1.0, v))
+        # 竖向整体渐变（微逆光：顶部稍亮，底部稍沉）
+        r0 = BG_TOP[0] * (1.0 - v) + BG_BOT[0] * v
+        g0 = BG_TOP[1] * (1.0 - v) + BG_BOT[1] * v
+        b0 = BG_TOP[2] * (1.0 - v) + BG_BOT[2] * v
+        # 微木纹波动（正弦波模拟木材年轮）
+        grain = math.sin((y_idx - oy) * 0.35 + math.sin((y_idx - oy) * 0.12) * 2.0)
+        if grain > 0:
+            factor = grain * 0.035
+            c = (min(255, int(r0 + (WOOD_LGT[0] - r0) * factor)),
+                 min(255, int(g0 + (WOOD_LGT[1] - g0) * factor)),
+                 min(255, int(b0 + (WOOD_LGT[2] - b0) * factor)))
+        else:
+            factor = (-grain) * 0.045
+            c = (max(0, int(r0 + (WOOD_DARK[0] - r0) * factor)),
+                 max(0, int(g0 + (WOOD_DARK[1] - g0) * factor)),
+                 max(0, int(b0 + (WOOD_DARK[2] - b0) * factor)))
+        fill_rect(grid, PX, ox, y_idx, ox + size, y_idx + 1, c, 1.0)
+
+    # 3D 倒角高光与暗边（木质边缘斜切）
+    bw = max(1.0, size * 0.018)
+    # 顶部与左侧斜切高光
+    hline(grid, PX, oy + bw * 0.5, ox, ox + size, BEVEL_LGT, w=bw, a=0.55)
+    vline(grid, PX, ox + bw * 0.5, oy, oy + size, BEVEL_LGT, w=bw, a=0.55)
+    # 底部与右侧斜切背光投影
+    hline(grid, PX, oy + size - bw * 0.5, ox, ox + size, BEVEL_DRK, w=bw, a=0.45)
+    vline(grid, PX, ox + size - bw * 0.5, oy, oy + size, BEVEL_DRK, w=bw, a=0.45)
 
 
-def draw_board(grid, PX, ox, oy, size, with_bg=True):
-    """在 grid 上画五子连珠棋盘：左上角 (ox, oy)，边长 size（像素）。
-    浅木色底 + 5x5 网格线（4/8/12/16/20，两端各多延 2 单位）+ 主对角线五颗黑子。
-    with_bg=False 时只画网格线与棋子（透明底——自适应前景层用，木色由背景层提供）。"""
+def luxury_stone(grid, PX, cx, cy, r):
+    """画一颗带有曜石光泽与立体球形漫反射的五子棋黑子。"""
+    k = r / 3.0
+    # 1. 柔和接触阴影（分两层：近身紧密深阴影 + 远端扩散软阴影）
+    circle(grid, PX, cx + 0.9 * k, cy + 1.1 * k, r + 0.6 * k, SHADOW_COL, 0.22)
+    circle(grid, PX, cx + 0.5 * k, cy + 0.6 * k, r + 0.15 * k, SHADOW_COL, 0.35)
+
+    # 2. 曜石棋子主体底色
+    circle(grid, PX, cx, cy, r, STONE_BASE, 1.0)
+
+    # 3. 球形漫反射亮面（左上偏移亮面）
+    circle(grid, PX, cx - 0.35 * k, cy - 0.35 * k, r - 0.2 * k, STONE_BODY, 0.70)
+
+    # 4. 右下方月牙形暗部
+    circle(grid, PX, cx + 0.65 * k, cy + 0.65 * k, r - 0.1 * k, STONE_SH, 0.55, clip=(cx, cy, r))
+
+    # 5. 右下方极弱环境反光（模拟木质盘面反射到黑子底部的微光）
+    circle(grid, PX, cx + 0.75 * k, cy + 0.75 * k, r * 0.85, STONE_RIM, 0.15, clip=(cx, cy, r))
+
+    # 6. 左上方主高光与副高光
+    circle(grid, PX, cx - 1.05 * k, cy - 1.05 * k, 0.85 * k, STONE_SPEC, 0.85)
+    circle(grid, PX, cx - 1.25 * k, cy - 1.25 * k, 0.38 * k, STONE_SPEC, 1.0)
+
+
+def draw_game_board(grid, PX, ox, oy, size, with_bg=True):
+    """在 grid 上绘制新国风手游级五子连珠盘面。
+    - with_bg=True 时渲染完整实木底板；
+    - with_bg=False 时仅渲染网格、金线镶边与五子连珠，用于 Android 8+ 自适应前景层。
+    """
     s = size / 24.0
+
     if with_bg:
-        # 棋盘底：浅木色填充（先画，网格线与棋子盖在上面）
-        fill_rect(grid, PX, ox, oy, ox + size, oy + size, BG)
-    for p in (4, 8, 12, 16, 20):
-        vline(grid, PX, ox + p * s, oy + 2 * s, oy + 22 * s, GRID)
-        hline(grid, PX, oy + p * s, ox + 2 * s, ox + 22 * s, GRID)
-    # 五子连珠：主对角线（左上→右下），全黑五连（同色五连胜，符合规则）
+        render_wood_plate(grid, PX, ox, oy, size)
+
+    # 金色内衬边框（雅致金线，边距 1.8 逻辑单位）
+    inlay_pad = 1.8 * s
+    inlay_w = max(1.0, 0.32 * s)
+    x0, y0 = ox + inlay_pad, oy + inlay_pad
+    x1, y1 = ox + size - inlay_pad, oy + size - inlay_pad
+    hline(grid, PX, y0, x0, x1, GOLD_INLAY, w=inlay_w, a=0.75)
+    hline(grid, PX, y1, x0, x1, GOLD_INLAY, w=inlay_w, a=0.65)
+    vline(grid, PX, x0, y0, y1, GOLD_INLAY, w=inlay_w, a=0.75)
+    vline(grid, PX, x1, y0, y1, GOLD_INLAY, w=inlay_w, a=0.65)
+
+    # 5x5 网格线（4, 8, 12, 16, 20）
+    line_w = max(1.0, 0.28 * s)
+    grid_coords = [4, 8, 12, 16, 20]
+    for p in grid_coords:
+        vline(grid, PX, ox + p * s, oy + 3.0 * s, oy + 21.0 * s, GRID_LINE, w=line_w, a=0.88)
+        hline(grid, PX, oy + p * s, ox + 3.0 * s, ox + 21.0 * s, GRID_LINE, w=line_w, a=0.88)
+
+    # 星位（天元 (12,12) 与四角星位 (8,8), (16,8), (8,16), (16,16)）
+    star_r = max(1.2, 0.52 * s)
+    star_points = [(8, 8), (16, 8), (12, 12), (8, 16), (16, 16)]
+    for sx, sy in star_points:
+        circle(grid, PX, ox + sx * s, oy + sy * s, star_r, STAR_POINT, 0.95)
+
+    # 胜利金辉（Renju Victory Glow）：五子连珠对角线下的金色流光
+    aura_x0 = ox + 4 * s
+    aura_y0 = oy + 4 * s
+    aura_x1 = ox + 20 * s
+    aura_y1 = oy + 20 * s
+    line(grid, PX, aura_x0, aura_y0, aura_x1, aura_y1, GOLD_GLOW, w=4.5 * s, a=0.18)
+    line(grid, PX, aura_x0, aura_y0, aura_x1, aura_y1, (255, 235, 140), w=1.6 * s, a=0.35)
+
+    # 五子连珠：主对角线全黑五连
+    stone_r = 2.65 * s
     for i in range(5):
-        stone(grid, PX, ox + (4 + i * 4) * s, oy + (4 + i * 4) * s, 2.5 * s, 'b')
+        cx = ox + (4 + i * 4) * s
+        cy = oy + (4 + i * 4) * s
+        luxury_stone(grid, PX, cx, cy, stone_r)
+
+    # 决胜天元（中心第三颗连珠棋子）加冕微光小星芒（表达绝杀连珠）
+    cx_center = ox + 12 * s
+    cy_center = oy + 12 * s
+    circle(grid, PX, cx_center - 1.25 * (stone_r / 3.0), cy_center - 1.25 * (stone_r / 3.0), 0.75 * s, GOLD_GLOW, 0.45)
 
 
 def write_png(path, grid, PX):
@@ -196,7 +290,6 @@ def px_round(x, y, r, PX):
     cx, cy = x + 0.5, y + 0.5
     if (r <= cx <= PX - r) and (r <= cy <= PX - r):
         return 1.0
-    # 归属角：决定角圆心
     ccx = r if cx < r else (PX - r if cx > PX - r else cx)
     ccy = r if cy < r else (PX - r if cy > PX - r else cy)
     if ccx == cx and ccy == cy:
@@ -206,8 +299,7 @@ def px_round(x, y, r, PX):
 
 
 def round_corner_mask(grid, PX, radius):
-    """把画布四角裁成圆角（radius 像素，抗锯齿）：
-    圆角矩形之外置为透明（None）——圆角做进资源本身，不依赖系统遮罩。"""
+    """把画布四角裁成圆角（radius 像素，抗锯齿）。"""
     r = radius
     for y in range(PX):
         for x in range(PX):
@@ -219,37 +311,43 @@ def round_corner_mask(grid, PX, radius):
                 grid[y][x] = (cur[0], cur[1], cur[2], round(cur[3] * cov))
 
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-RES = os.path.normpath(os.path.join(HERE, '..', 'res'))
+def main():
+    HERE = os.path.dirname(os.path.abspath(__file__))
+    RES = os.path.normpath(os.path.join(HERE, '..', 'res'))
 
-# 1) 自适应图标前景层：108dp 画布，透明底，棋盘 96% 满幅（木色底由背景层提供）
-FG_DENS = {'mdpi': 108, 'hdpi': 162, 'xhdpi': 216, 'xxhdpi': 324, 'xxxhdpi': 432}
-for d, px in FG_DENS.items():
-    grid = make_grid(px)
-    size = px * BOARD_FRAC
-    ox = (px - size) / 2.0
-    draw_board(grid, px, ox, ox, size, with_bg=False)
-    out = os.path.join(RES, 'drawable-' + d, 'ic_launcher_foreground.png')
-    os.makedirs(os.path.dirname(out), exist_ok=True)
-    write_png(out, grid, px)
-    print('foreground written:', out, px, 'x', px)
+    # 1) 自适应图标前景层：108dp 画布，透明底，棋盘在 66dp 安全区内充分绽放
+    FG_DENS = {'mdpi': 108, 'hdpi': 162, 'xhdpi': 216, 'xxhdpi': 324, 'xxxhdpi': 432}
+    for d, px in FG_DENS.items():
+        grid = make_grid(px)
+        # 前景层在自适应图标中安全视距内（约占 78% 画布，确保在任何圆形/水滴形裁剪下完整可见）
+        fg_frac = 0.78
+        size = px * fg_frac
+        ox = (px - size) / 2.0
+        draw_game_board(grid, px, ox, ox, size, with_bg=False)
+        out = os.path.join(RES, 'drawable-' + d, 'ic_launcher_foreground.png')
+        os.makedirs(os.path.dirname(out), exist_ok=True)
+        write_png(out, grid, px)
+        print('foreground written:', out, f'{px}x{px}')
 
-# 2) 低版本回退：满幅木色棋盘 + 圆角遮罩（Android 7-，无深色底）
-#    【v1.2.1】棋盘铺满整幅（96%），不再「深色底 + 居中棋盘」；四角圆角透明
-LEGACY_DENS = {'mdpi': 48, 'hdpi': 72, 'xhdpi': 96, 'xxhdpi': 144, 'xxxhdpi': 192}
-for d, px in LEGACY_DENS.items():
-    grid = make_grid(px)
-    size = px * BOARD_FRAC
-    ox = (px - size) / 2.0
-    draw_board(grid, px, ox, ox, size, with_bg=True)
-    round_corner_mask(grid, px, px * CORNER_R)
-    out = os.path.join(RES, 'mipmap-' + d, 'ic_launcher.png')
-    os.makedirs(os.path.dirname(out), exist_ok=True)
-    write_png(out, grid, px)
-    print('legacy written:', out, px, 'x', px)
+    # 2) 低版本回退：满幅实木棋盘 + 圆角遮罩（Android 7-，手游拟物观感）
+    LEGACY_DENS = {'mdpi': 48, 'hdpi': 72, 'xhdpi': 96, 'xxhdpi': 144, 'xxxhdpi': 192}
+    for d, px in LEGACY_DENS.items():
+        grid = make_grid(px)
+        size = px * BOARD_FRAC
+        ox = (px - size) / 2.0
+        draw_game_board(grid, px, ox, ox, size, with_bg=True)
+        round_corner_mask(grid, px, px * CORNER_R)
+        out = os.path.join(RES, 'mipmap-' + d, 'ic_launcher.png')
+        os.makedirs(os.path.dirname(out), exist_ok=True)
+        write_png(out, grid, px)
+        print('legacy written:', out, f'{px}x{px}')
 
-# 3) 移除旧矢量前景（已被 PNG 取代；@drawable/ic_launcher_foreground 现在解析到 PNG）
-old = os.path.join(RES, 'drawable', 'ic_launcher_foreground.xml')
-if os.path.exists(old):
-    os.remove(old)
-    print('removed old vector:', old)
+    # 3) 移除旧矢量前景（确保 aapt2 编译与链接无冲突）
+    old = os.path.join(RES, 'drawable', 'ic_launcher_foreground.xml')
+    if os.path.exists(old):
+        os.remove(old)
+        print('removed old vector:', old)
+
+
+if __name__ == '__main__':
+    main()

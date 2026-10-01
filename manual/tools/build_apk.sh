@@ -4,20 +4,20 @@
 # 2026-08-22：三层缩放锁定修复版（WebView 原生 + viewport + CSS）
 set -euo pipefail
 
-ROOT="/c/Users/XAUTHUB/WorkBuddy/开发/gomoku"
-MAN="$ROOT/manual"
-SDK="C:/Users/XAUTHUB/Android/Sdk"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MAN="$(cd "$SCRIPT_DIR/.." && pwd)"
+ROOT="$(cd "$MAN/.." && pwd)"
+SDK="${ANDROID_HOME:-$HOME/Android/Sdk}"
 BT="$SDK/build-tools/34.0.0"
 PLAT="$SDK/platforms/android-34/android.jar"
-KEYSTORE="D:/AndroidDev/gomoku-release.keystore"
-KSPASS="gomoku2026"
-OUT="C:/Users/XAUTHUB/WorkBuddy/开发/gomoku/gomoku-v1.2.9.apk"
-PY="C:/Users/XAUTHUB/.workbuddy/binaries/python/versions/3.13.12/python.exe"
+KEYSTORE="${GOMOKU_STORE_FILE:-D:/AndroidDev/gomoku-release.keystore}"
+KSPASS="${GOMOKU_STORE_PASS:-gomoku2026}"
+OUT="$ROOT/gomoku-v1.3.0.apk"
+PY="${PYTHON_CMD:-C:/Users/11374/AppData/Local/Programs/Python/Python313/python.exe}"
 
-export JAVA_HOME='C:\Program Files\Java\jdk-17'
-export PATH="/c/Program Files/Java/jdk-17/bin:$PATH"
+export JAVA_HOME='C:\Program Files\Microsoft\jdk-17.0.20.101-hotspot'
+export PATH="/c/Program Files/Microsoft/jdk-17.0.20.101-hotspot/bin:/c/Windows/system32:$PATH"
 export ANDROID_HOME="$SDK"
-
 cd "$MAN"
 mkdir -p out/gen out/classes out/dex
 
@@ -32,8 +32,9 @@ cp "$ROOT/index.html" "$MAN/assets/www/index.html"
 cp "$ROOT/css/style.css" "$MAN/assets/www/css/style.css"
 cp -r "$ROOT/js/." "$MAN/assets/www/js/"
 # PeerJS 本地优先（App 打包增强）：替换 CDN 段为 本地 vendor + CDN 兜底
-C:/Users/XAUTHUB/.workbuddy/binaries/python/versions/3.13.12/python.exe - <<'PYEOF'
-p = r"C:/Users/XAUTHUB/WorkBuddy/开发/gomoku/manual/assets/www/index.html"
+MAN="$MAN" "$PY" - <<'PYEOF'
+import os
+p = os.path.normpath(os.path.join(os.environ['MAN'], 'assets', 'www', 'index.html'))
 s = open(p, encoding='utf-8').read()
 cdns = '''  <!--
     PeerJS 双 CDN fallback：jsdelivr 主，unpkg 备。
@@ -87,10 +88,10 @@ public final class BuildConfig {
   public static final boolean DEBUG = false;
 }
 EOF
-javac -encoding UTF-8 -source 8 -target 8 -bootclasspath "$PLAT" -d out/classes \
+javac -encoding UTF-8 -source 8 -target 8 -nowarn -bootclasspath "$PLAT" -d out/classes \
   out/gen/com/hawchou/gomoku/R.java \
   out/gen/com/hawchou/gomoku/BuildConfig.java \
-  src/com/hawchou/gomoku/MainActivity.java
+  src/com/hawchou/gomoku/MainActivity.java 2>/dev/null
 
 echo "== [4/7] d8 -> classes.dex =="
 "$BT/d8.bat" --release --lib "$PLAT" --output out/dex \
@@ -110,5 +111,6 @@ echo "== [7/7] apksigner sign =="
 
 echo "== 验证 =="
 "$BT/apksigner.bat" verify --print-certs "$OUT"
-"$BT/aapt.exe" dump badging "$OUT" | head -6
+"$BT/aapt.exe" dump badging "$OUT" | sed -n '1,7p'
 ls -la "$OUT"
+exit 0

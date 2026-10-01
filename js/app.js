@@ -239,10 +239,10 @@
     resizeBoard();
   }
 
-  var BOARD_BG = '#e9e2d2';
-  var LINE = '#5b5342';
-  var LAST_MARK = '#d4a853';
-  var WIN_OVERLAY = 'rgba(212, 168, 83, 0.28)';
+  var BOARD_BG = '#e8d5b8';
+  var LINE = '#5c4129';
+  var LAST_MARK = '#f5d47a';
+  var WIN_OVERLAY = 'rgba(212, 168, 83, 0.35)';
 
   function cellPx() {
     // 15×15 网格：边距一个半格距
@@ -265,8 +265,14 @@
     ctx.fillStyle = BOARD_BG;
     ctx.fillRect(0, 0, boardCssSize, boardCssSize);
 
+    // 金线外框（雅致内衬金线）
+    var pad = c * 0.75;
+    ctx.strokeStyle = 'rgba(212, 168, 83, 0.45)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(pad, pad, boardCssSize - pad * 2, boardCssSize - pad * 2);
+
     // 坐标轴标签（A-O 列，1-15 行）
-    ctx.fillStyle = '#7a7260';
+    ctx.fillStyle = '#7a6048';
     ctx.font = (c * 0.36) + 'px ' + getComputedStyle(document.documentElement).getPropertyValue('--font').split(',')[0].trim();
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -324,12 +330,19 @@
     }
 
     // 最后一手标记
+    // 最后一手标记
     if (state.lastMove) {
       var lp = coordToPx(state.lastMove.x, state.lastMove.y);
-      ctx.strokeStyle = LAST_MARK;
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#f5d47a';
+      ctx.lineWidth = 2.5;
       ctx.beginPath();
       ctx.arc(lp.px, lp.py, c * 0.34, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.strokeStyle = 'rgba(212, 168, 83, 0.45)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(lp.px, lp.py, c * 0.42, 0, Math.PI * 2);
       ctx.stroke();
     }
 
@@ -382,25 +395,43 @@
     ctx.save();
     ctx.translate(pos.px, pos.py);
     ctx.scale(scale, scale);
+
+    // 棋子接触阴影（自然下沉立体感）
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.42)';
+    ctx.shadowBlur = r * 0.35;
+    ctx.shadowOffsetX = r * 0.15;
+    ctx.shadowOffsetY = r * 0.22;
+
     if (p === E.BLACK) {
-      var grad = ctx.createRadialGradient(-r * 0.35, -r * 0.35, r * 0.1, 0, 0, r);
-      grad.addColorStop(0, '#454a55');
-      grad.addColorStop(0.7, '#14161a');
-      grad.addColorStop(1, '#0b0c10');
+      var grad = ctx.createRadialGradient(-r * 0.35, -r * 0.35, r * 0.08, 0, 0, r);
+      grad.addColorStop(0, '#4e5460');
+      grad.addColorStop(0.3, '#2a2c32');
+      grad.addColorStop(0.75, '#121418');
+      grad.addColorStop(1, '#08090c');
       ctx.fillStyle = grad;
     } else {
-      grad = ctx.createRadialGradient(-r * 0.35, -r * 0.35, r * 0.1, 0, 0, r);
+      grad = ctx.createRadialGradient(-r * 0.35, -r * 0.35, r * 0.08, 0, 0, r);
       grad.addColorStop(0, '#ffffff');
-      grad.addColorStop(0.75, '#e6e0d2');
-      grad.addColorStop(1, '#cfc8b8');
+      grad.addColorStop(0.35, '#faf7f0');
+      grad.addColorStop(0.75, '#e4dccf');
+      grad.addColorStop(1, '#cdc3b2');
       ctx.fillStyle = grad;
     }
     ctx.beginPath();
     ctx.arc(0, 0, r, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = p === E.BLACK ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.35)';
+
+    // 清除阴影绘制外描边与曜石高光
+    ctx.shadowColor = 'transparent';
+    ctx.strokeStyle = p === E.BLACK ? 'rgba(255,255,255,0.22)' : 'rgba(90,70,50,0.35)';
     ctx.lineWidth = 1;
     ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(-r * 0.38, -r * 0.38, r * 0.22, 0, Math.PI * 2);
+    ctx.fillStyle = p === E.BLACK ? 'rgba(255, 255, 255, 0.32)' : 'rgba(255, 255, 255, 0.75)';
+    ctx.fill();
+
     ctx.restore();
   }
 
